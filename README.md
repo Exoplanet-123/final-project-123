@@ -10,8 +10,8 @@ Our immediate purpose is to find intelligent, time-dependent aperture sizes for 
 Packages to be used will include:
 * [Hadoopy](http://www.hadoopy.com/en/latest/), a Python wrapper for Hadoop written in Cython.
 * [Astropy](https://astropy.readthedocs.org/en/stable/overview.html), a popular astronomy library for Python which deals with .fits files, the standard data format for our Spitzer star observation data.
-* [Python Imaging Library](http://www.pythonware.com/products/pil/)
 * [SAOImage DS9](http://ds9.si.edu/site/Home.html), an Astronomical Data Visualization Application. Allows for direct viewing of the individual frames in .fits files
+* [Python Imaging Library](http://www.pythonware.com/products/pil/)
 
 #####Timeline:
 * By May 1: Prototype will demonstrate aperture calculation algorithm on a single frame for a single star
