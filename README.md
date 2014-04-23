@@ -1,4 +1,4 @@
-final-project-123
+#Optimal Aperture Calculation
 =================
+Team: Hannah Diamond-Lowe, Zakir Gowani
 
-Optimal Aperture Calculation
