@@ -14,7 +14,7 @@ Packages to be used will include:
 * [Python Imaging Library](http://www.pythonware.com/products/pil/)
 
 #####Timeline:
-* By May 1: Prototype will demonstrate aperture calculation algorithm on a single frame for a single star
+* By May 6: Prototype will demonstrate aperture calculation algorithm on a single frame for a single star
 * By May 18: Expand algorithm's operation to consider time variation over frames
 * By May 25: Move algorithm into Hadoop framework, linked by Hadoopy
 * By June 3: Final implementation of project which compares models, accompanied by visualizations and a writeup
