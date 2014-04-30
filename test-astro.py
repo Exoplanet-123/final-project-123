@@ -1,7 +1,7 @@
-#Testing fits I/O with astropy
+#Aperture production with Astropy, Bresenham circle algorithm 
 #Documentation can be found here:
 #http://docs.astropy.org/en/stable/io/fits/index.html
-#4/27/2014
+#Started 4/27/2014
 from astropy.io import fits
 import scipy
 import ds9
@@ -14,6 +14,9 @@ from sklearn.cluster import KMeans
 from sklearn.datasets import load_digits
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import scale
+
+NUM_ROWS = 32
+NUM_COLS = 32
 
 #Converts frames into a manageable unit: MegaJanskys per Arc
 def flux_convert(hdu_list, frame_num):
@@ -30,7 +33,7 @@ def flux_convert(hdu_list, frame_num):
 		converted_frame.append(n_row)
 	return np.array(converted_frame)
 
-#returns index of brightest pixel
+#Takes numpy array, returns index of brightest pixel
 def brightest_pixel(frame):
 	max_ind = (0, 0)
 	brightest = 0
@@ -40,6 +43,76 @@ def brightest_pixel(frame):
 				brightest = frame[i][j]
 				max_ind = (i, j)
 	return max_ind
+
+def frame_neighbors(frame, index_tuple):
+	i = index_tuple[0]
+	j = index_tuple[1]
+	if i != 0 and j != 0 and i != (NUM_ROWS - 1) and j != (NUM_COLS - 1):
+		A = frame[i - 1, j - 1]
+		B = frame[i, j - 1]
+		C = frame[i + 1, j - 1]
+		D = frame[i - 1, j]
+		E = frame[i + 1, j]
+		F = frame[i - 1, j + 1]
+		G = frame[i, j + 1]
+		H = frame[i + 1, j + 1]
+		return [A, B, C, D, E, F, G, H]
+	elif i == 0 and j != 0 and i != (NUM_ROWS - 1) and j != (NUM_COLS - 1):
+		B = frame[i, j - 1]
+		C = frame[i + 1, j - 1]
+		D = frame[i + 1, j]
+		E = frame[i, j + 1]
+		F = frame[i + 1, j + 1]
+		return [B,C,D,E,F]
+	elif i != 0 and j == 0 and i != (NUM_ROWS - 1) and j != (NUM_COLS - 1):
+		D = frame[i - 1, j]
+		E = frame[i + 1, j]
+		F = frame[i - 1, j + 1]
+		G = frame[i, j + 1]
+		H = frame[i + 1, j + 1]
+		return [D, E, F, G, H]
+	elif i == 0 and j == 0 and i != (NUM_ROWS - 1) and j != (NUM_COLS - 1):
+		D = frame[i + 1, j]
+		E = frame[i, j + 1]
+		F = frame[i + 1, j + 1]
+		return [D, E, F]
+	elif i == (NUM_ROWS - 1) and j != (NUM_COLS - 1):
+		A = frame[i - 1, j - 1]
+		B = frame[i, j - 1]
+		C = frame[i - 1, j]
+		D = frame[i - 1, j + 1]
+		E = frame[i, j + 1]
+		return [A, B, C, D, E]
+	elif i != (NUM_ROWS - 1) and j == (NUM_COLS - 1):
+		A = frame[i - 1, j - 1]
+		B = frame[i, j - 1]
+		C = frame[i + 1, j - 1]
+		D = frame[i - 1, j]
+		E = frame[i + 1, j]
+		return [A, B, C, D, E]
+	elif i == (NUM_ROWS - 1) and j == (NUM_COLS - 1):
+		A = frame[i - 1, j - 1]
+		B = frame[i, j - 1]
+		D = frame[i - 1, j]
+		return [A, B, D]
+
+#Takes numpy array, index of pixel in question, and integer number of standard deviations
+#If pixel in question and its immediate neighbors are n SD outside of the mean, the pixel is considered 'significant'
+def is_significant(frame, index_tuple, deviations = 1, mean = -1, SD = -1):
+	if mean == -1 or SD == -1:
+		frame_mean = np.mean(frame)
+		frame_SD = np.std(frame)
+	else:
+		frame_mean = mean
+		frame_SD = SD
+	lower_bound = frame_mean + deviations * frame_SD
+	if frame[index_tuple] > lower_bound:
+		neighbors = frame_neighbors(frame, index_tuple)
+		for nbr in frame_neighbors:
+			if frame[nbr] <= lower_bound:
+				return False
+		return True
+	return False
 
 #Returns data with items outside circle (of given radius) masked by zero
 #Uses the Bresenham Circle Algorithm to draw nice looking circles in taxicab geometry
@@ -97,6 +170,18 @@ def print_frame(frame, spacing = 1, num_sigfigs = 0):
 				print "0", " " * (spacing-1),
 		print ""
 
+#Returns numerical measurement describing quality of mask
+def aperture_metric(frame, mask):
+	#Qualities we want in a mask:
+		#Conserves valuable information.
+			#What information is valuable?
+			#Information in a moderately sized cluster of similar values;
+			#High pixel spread; high brightness
+			#Possibility: find a bright pixel whose neighbors have luminosities above the average
+			#This can be recursive up to some number of levels (must be finite)
+			#Such a pixel is a good candidate for being non-noise, depending on recursion level
+	pass
+
 def test_aperture(frame, center_tuple, radius):
 	pass
 
@@ -108,13 +193,10 @@ def main():
 	
 	#Prints a version of the star with center at brightest pixel, and radius r
 	max_pixel = brightest_pixel(frame_one)
-	test_disk = mk_disk(frame_one, max_pixel, 10)
+	test_disk = mk_disk(frame_one, max_pixel, 3)
 	print_frame(test_disk, spacing = 3)
 	
 	#subprocess.call(["ds9", "-zoom","8", fits_file])
 
 if __name__ == "__main__":
 	main()
-	
-
-
