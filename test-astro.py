@@ -4,10 +4,11 @@
 #Started 4/27/2014
 from astropy.io import fits
 import scipy
-import ds9
+#import ds9
 import subprocess
 import numpy as np
 import pylab as pl
+import matplotlib.pyplot as plt
 import sklearn.cluster as sk
 from sklearn import metrics
 from sklearn.cluster import KMeans
@@ -96,20 +97,40 @@ def frame_neighbors(frame, index_tuple):
 		D = frame[i - 1, j]
 		return [A, B, D]
 
+def get_annulus_frames(frame, center_tuple, annulus_num):
+	i = center_tuple[0]
+	j = center_tuple[1]
+	annulus_frames = []
+	x_shift = range(i - annulus_num, i + annulus_num+1)
+	y_shift = range(j - annulus_num+1, j + annulus_num)
+	for x in x_shift:
+		if frame[x, j - annulus_num] != 0:
+			annulus_frames.append(frame[x, j - annulus_num])
+		if frame[x, j + annulus_num] != 0:
+			annulus_frames.append(frame[x, j + annulus_num])
+	for y in y_shift:
+		if frame [i - annulus_num, y] != 0:
+			annulus_frames.append(frame[i - annulus_num, y])
+		if frame [i + annulus_num, y] != 0:
+			annulus_frames.append(frame[i + annulus_num, y])
+	return annulus_frames
+
 #Takes numpy array, index of pixel in question, and integer number of standard deviations
 #If pixel in question and its immediate neighbors are n SD outside of the mean, the pixel is considered 'significant'
 def is_significant(frame, index_tuple, deviations = 1, mean = -1, SD = -1):
 	if mean == -1 or SD == -1:
 		frame_mean = np.mean(frame)
+		#print frame_mean
 		frame_SD = np.std(frame)
+		#print frame_SD
 	else:
 		frame_mean = mean
 		frame_SD = SD
 	lower_bound = frame_mean + deviations * frame_SD
 	if frame[index_tuple] > lower_bound:
 		neighbors = frame_neighbors(frame, index_tuple)
-		for nbr in frame_neighbors:
-			if frame[nbr] <= lower_bound:
+		for nbr in neighbors:
+			if nbr <= lower_bound:
 				return False
 		return True
 	return False
@@ -170,6 +191,18 @@ def print_frame(frame, spacing = 1, num_sigfigs = 0):
 				print "0", " " * (spacing-1),
 		print ""
 
+def plot_flux_vs_pos(frame, center_tuple, radius):
+	plt.figure(1)
+	annuli = np.arange(radius+1)
+	print "annuli", annuli
+	avg_flux = [frame[center_tuple]]
+	for annulus in annuli[:len(annuli)-1]:
+		avg_flux.append(np.mean(get_annulus_frames(frame, center_tuple, annulus+1)))
+	print "avg_flux", avg_flux
+	plt.plot(annuli, avg_flux)
+	plt.show()
+
+
 #Returns numerical measurement describing quality of mask
 def aperture_metric(frame, mask):
 	#Qualities we want in a mask:
@@ -194,8 +227,11 @@ def main():
 	#Prints a version of the star with center at brightest pixel, and radius r
 	max_pixel = brightest_pixel(frame_one)
 	test_disk = mk_disk(frame_one, max_pixel, 3)
-	print_frame(test_disk, spacing = 3)
-	
+	print_frame(test_disk, spacing = 4)
+	#test_plot = mk_plot
+	significance = is_significant(frame_one, (15, 15), 1)
+	annulus_frames = get_annulus_frames(frame_one, max_pixel, 2)
+	plot_flux_vs_pos(frame_one, max_pixel, 3)
 	#subprocess.call(["ds9", "-zoom","8", fits_file])
 
 if __name__ == "__main__":
