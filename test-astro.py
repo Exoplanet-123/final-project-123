@@ -319,6 +319,9 @@ def numpy2image(new_filename, frame):
 	frame1 *= 255
 	im = Image.fromarray(np.uint8(frame1))
 	im.save(new_filename)
+	new_img = Image.open(new_filename)
+	new_img = new_img.resize((288, 288), Image.BILINEAR)
+	new_img.save(new_filename)
 
 def main():
 	fits_file = "Exoplanet123_Prototype/SPITZER_I1_41629440_0000_0000_1_bcd.fits"
