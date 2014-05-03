@@ -8,6 +8,8 @@ import ds9
 import subprocess
 import numpy as np
 import matplotlib.pyplot as plt
+import PIL
+import Image
 #import sklearn.cluster as sk
 #from sklearn import metrics
 #from sklearn.cluster import KMeans
@@ -196,9 +198,24 @@ def is_significant(frame, index_tuple, deviations = 1, mean = -1, SD = -1):
 
 #Returns data with items not lying on circle (of given radius) masked by zero
 #Uses the Bresenham Circle Algorithm to draw nice looking circles in taxicab geometry
-def mk_circle(frame, center_tuple, radius):
+def mk_circle(frame, center_tuple, radius):	
 	(x0, y0) = center_tuple
-	new_frame = np.array([[0.0]*32]*32)
+	new_frame = np.array([[0.0]*NUM_COLS]*NUM_ROWS)
+	if radius == 1:
+		i = x0
+		j = y0
+		min_bd = 0
+		level = 1
+		left_bd = NUM_ROWS - 1
+		right_bd = NUM_COLS - 1
+		z = [(i - level, j - level),(i, j - level),(i + level, j - level),(i - level, j),(i + level, j),\
+		(i - level, j + level), (i, j + level),(i + level, j + level)]
+		for tuple in z:
+			try:
+				new_frame[tuple] = frame[tuple]
+			except:
+				pass
+		return new_frame
 	x = float(radius)
 	y = 0.0
 	radiusError = 1.0 - x
@@ -296,24 +313,34 @@ def aperture_metric(frame, mask):
 def test_aperture(frame, center_tuple, radius):
 	pass
 
+def numpy2image(new_filename, frame):
+	#Normalize frame luminosities to list in range 0 to 255
+	frame1 = frame/np.max(np.abs(frame))
+	frame1 *= 255
+	im = Image.fromarray(np.uint8(frame1))
+	im.save(new_filename)
+
 def main():
 	fits_file = "Exoplanet123_Prototype/SPITZER_I1_41629440_0000_0000_1_bcd.fits"
 	hdulist = fits.open(fits_file)
 	frame_list = hdulist[0].data
 	frame_one = frame_list[0]
 	
-	#Prints a version of the star with center at brightest pixel, and radius r
+	#Prints a version of the star with center at brightest region, and radius r
 	max_pixel = brightest_region(frame_one)
-	test_disk = mk_disk(frame_one, max_pixel, radius = 3)
+	test_disk = mk_disk(frame_one, max_pixel, radius = 1)
+	
 	#print_frame(test_disk, spacing = 4)
 	#test_plot = mk_plot
 	#significance = is_significant(frame_one, (15, 15), 1)
 	
-	light_curve(frame_one, max_pixel)
+	#light_curve(frame_one, max_pixel)
 	
+	numpy2image("images/frame_one.png", frame_one)
+	numpy2image("images/frame_one_mask_rad_2.png", test_disk)
 	
-	annulus_frames = get_annulus_frames(frame_one, max_pixel, 2)
-	plot_flux_vs_pos(frame_one, max_pixel, 3)
+	#annulus_frames = get_annulus_frames(frame_one, max_pixel, 2)
+	#plot_flux_vs_pos(frame_one, max_pixel, 3)
 	#subprocess.call(["ds9", "-zoom","8", fits_file])
 
 if __name__ == "__main__":
