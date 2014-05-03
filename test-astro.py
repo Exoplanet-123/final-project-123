@@ -270,11 +270,11 @@ def print_frame(frame, spacing = 1, num_sigfigs = 0):
 def plot_flux_vs_pos(frame, center_tuple, radius):
 	plt.figure(1)
 	annuli = np.arange(radius+1)
-	print "annuli", annuli
+	#print "annuli", annuli
 	avg_flux = [frame[center_tuple]]
 	for annulus in annuli[:len(annuli)-1]:
 		avg_flux.append(np.mean(get_annulus_frames(frame, center_tuple, annulus+1)))
-	print "avg_flux", avg_flux
+		print annulus, get_annulus_frames(frame, center_tuple, annulus+1)
 	plt.plot(annuli, avg_flux)
 	plt.show()
 
@@ -285,18 +285,38 @@ def light_curve(frame, index_tuple, max_radius = 5):
 	y_points = []
 	x = 0
 	for rad in range(max_radius + 1):
-		z = frame_neighbors_n(frame, index_tuple, level = rad)
-		print z
+		z = get_annulus_frames(frame, index_tuple, rad) 
+		#print z
 		avg = (sum(z))/(float(len(z)))
 		x_points.append(x)
 		y_points.append(avg)
 		x += 1
+	print "flux points", y_points
 	plt.plot(x_points, y_points, 'r--')
 	plt.title('Light Curve from pixel ' + str(index_tuple))
 	plt.xlabel('Radius (pixels)')
 	plt.ylabel('Average luminosity')
 	plt.savefig("images/light_curve" + str(index_tuple[0]) + "-" + str(index_tuple[0]) + ".png")
-	plt.show()
+	#plt.show()
+	return y_points
+
+def plot_slopes(y_points):
+	slopes = []
+	for y in range(len(y_points)):
+		if y == len(y_points)-1:
+			break
+		else:
+			slopes.append(y_points[y+1] - y_points[y])
+	return slopes
+
+def flux_ratios(fluxes):
+	ratios = []
+	for flux in range(len(fluxes)):
+		if flux == len(fluxes)-1:
+			break
+		else:
+			ratios.append(fluxes[flux]/fluxes[flux+1])
+	return ratios
 
 #Returns numerical measurement describing quality of mask
 def aperture_metric(frame, mask):
@@ -331,19 +351,23 @@ def main():
 	
 	#Prints a version of the star with center at brightest region, and radius r
 	max_pixel = brightest_region(frame_one)
-	test_disk = mk_disk(frame_one, max_pixel, radius = 1)
+	test_disk = mk_disk(frame_one, max_pixel, radius = 4)
 	
-	#print_frame(test_disk, spacing = 4)
+	print_frame(test_disk, spacing = 4)
 	#test_plot = mk_plot
 	#significance = is_significant(frame_one, (15, 15), 1)
 	
-	#light_curve(frame_one, max_pixel)
-	
-	numpy2image("images/frame_one.png", frame_one)
-	numpy2image("images/frame_one_mask_rad_2.png", test_disk)
+	#plot_flux_vs_pos(frame_one, max_pixel, 3)
+	y_points = light_curve(frame_one, max_pixel)
+	slopes = plot_slopes(y_points)	
+	ratios = flux_ratios(y_points)
+	print "slopes", slopes
+	print "ratios", ratios
+	#numpy2image("images/frame_one.png", frame_one)
+	#numpy2image("images/frame_one_mask_rad_2.png", test_disk)
 	
 	#annulus_frames = get_annulus_frames(frame_one, max_pixel, 2)
-	#plot_flux_vs_pos(frame_one, max_pixel, 3)
+	
 	#subprocess.call(["ds9", "-zoom","8", fits_file])
 
 if __name__ == "__main__":
