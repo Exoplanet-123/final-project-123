@@ -285,7 +285,7 @@ def light_curve(frame, index_tuple, max_radius = 5):
 	y_points = []
 	x = 0
 	for rad in range(max_radius + 1):
-		z = get_annulus_frames(frame, index_tuple, rad) 
+		z = get_annulus_frames(frame, index_tuple, rad) # frame_neighbors_n(frame, index_tuple, level = rad)
 		#print z
 		avg = (sum(z))/(float(len(z)))
 		x_points.append(x)
