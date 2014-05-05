@@ -339,7 +339,7 @@ def signal_to_noise(frame, inverted_frame, annulus_flux):
 		#Some flux values for the background are negative. 
 		#This is not a realistic measurement and is more likely a dead pixel. 
 		#We do not want to include these in our average background noise
-		if noise < 0:
+		if noise > 0:
 			avg_noise += noise
 			length += 1
 	avg_noise += 1
