@@ -48,6 +48,8 @@ def brightest_pixel(frame):
 
 #Find 2x2 area with greatest total luminosity
 #Return index of brightest pixel in the 2x2 area
+#Finding the brightest pixel this way eliminates the concern for a false 
+#positive brightest pixel, which could occur with a spike in detector noise
 def brightest_region(frame):
 	N = NUM_ROWS
 	M = NUM_COLS
@@ -61,7 +63,7 @@ def brightest_region(frame):
 			pix_B = frame[i + 1, j]
 			pix_C = frame[i, j + 1]
 			pix_D = frame[i + 1, j + 1]
-			z = [pix_A, pix_B, pix_D, pix_D]
+			z = [pix_A, pix_B, pix_C, pix_D]
 			total_lum = sum(z)
 			if total_lum > max_lum:
 				max_lum = total_lum
@@ -291,7 +293,7 @@ def light_curve(frame, index_tuple, max_radius = 5):
 		x_points.append(x)
 		y_points.append(avg)
 		x += 1
-	print "flux points", y_points
+	print "flux by anulus", y_points
 	plt.plot(x_points, y_points, 'r--')
 	plt.title('Light Curve from pixel ' + str(index_tuple))
 	plt.xlabel('Radius (pixels)')
@@ -330,6 +332,24 @@ def aperture_metric(frame, mask):
 			#Such a pixel is a good candidate for being non-noise, depending on recursion level
 	pass
 
+def signal_to_noise(frame, inverted_frame, annulus_flux):
+	avg_noise = 0
+	length = 0
+	for noise in inverted_frame:
+		#Some flux values for the background are negative. 
+		#This is not a realistic measurement and is more likely a dead pixel. 
+		#We do not want to include these in our average background noise
+		if noise < 0:
+			avg_noise += noise
+			length += 1
+	avg_noise += 1
+
+	ratios = []
+	for flux in annulus_flux:
+		ratios.append(flux/avg_noise)
+
+	return ratios
+
 def test_aperture(frame, center_tuple, radius):
 	pass
 
@@ -351,9 +371,9 @@ def main():
 	
 	#Prints a version of the star with center at brightest region, and radius r
 	max_pixel = brightest_region(frame_one)
-	test_disk = mk_disk(frame_one, max_pixel, radius = 4)
+	test_disk = mk_disk(frame_one, max_pixel, radius = 15)
 	
-	print_frame(test_disk, spacing = 4)
+	print_frame(test_disk, spacing = 1)
 	#test_plot = mk_plot
 	#significance = is_significant(frame_one, (15, 15), 1)
 	
@@ -363,12 +383,21 @@ def main():
 	ratios = flux_ratios(y_points)
 	print "slopes", slopes
 	print "ratios", ratios
+	print "sinal-to-noise ratios by annulus", signal_to_noise(frame_one, inverted_frame, y_points)
 	#numpy2image("images/frame_one.png", frame_one)
 	#numpy2image("images/frame_one_mask_rad_2.png", test_disk)
 	
 	#annulus_frames = get_annulus_frames(frame_one, max_pixel, 2)
 	
 	#subprocess.call(["ds9", "-zoom","8", fits_file])
+
+	avg_max_pixel = 0
+	for i in frame_list:
+		brightest_pixel_index = brightest_region(i)
+		avg_max_pixel += i[brightest_pixel_index[0]][brightest_pixel_index[1]]
+
+	avg_max_pixel = avg_max_pixel/len(frame_list)
+	print avg_max_pixel
 
 if __name__ == "__main__":
 	main()
