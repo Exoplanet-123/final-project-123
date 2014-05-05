@@ -258,6 +258,25 @@ def mk_disk(frame, center_tuple, radius):
 		new_frame.append(n_row)
 	return np.array(new_frame)
 
+def punch_hole(frame, center_tuple, radius):
+	new_frame = []
+	frame_list_form = np.ndarray.tolist(frame)
+	#Circle_frame has radius one pixel larger than what we want
+	circle_frame = np.ndarray.tolist(mk_circle(frame, center_tuple, radius + 1))
+	for row_num in range(len(circle_frame)):
+		indA, indB = 16, 16
+		for i in range(16):
+			if circle_frame[row_num][i] != 0:
+				indA = i
+				break
+		for j in range(31,16,-1):
+			if circle_frame[row_num][j] != 0:
+				indB = j
+				break
+		n_row = frame_list_form[row_num][0:indA] + circle_frame[row_num][indA:indB] + frame_list_form[row_num][indB:]
+		new_frame.append(n_row)
+	return np.array(new_frame)
+
 #Print a fits frame as a pretty array of numbers
 def print_frame(frame, spacing = 1, num_sigfigs = 0):
 	for row in np.ndarray.tolist(frame):		
@@ -333,6 +352,7 @@ def aperture_metric(frame, mask):
 	pass
 
 def signal_to_noise(frame, inverted_frame, annulus_flux):
+	return
 	avg_noise = 0
 	length = 0
 	for noise in inverted_frame:
@@ -371,16 +391,22 @@ def main():
 	
 	#Prints a version of the star with center at brightest region, and radius r
 	max_pixel = brightest_region(frame_one)
-	test_disk = mk_disk(frame_one, max_pixel, radius = 15)
+	#test_disk = mk_disk(frame_one, max_pixel, radius = 11)
 	
-	print_frame(test_disk, spacing = 1)
+	#test_disk2 = punch_hole(frame_one, max_pixel, radius = 4)
+	#print_frame(test_disk, spacing = 2)
+	
+	#Testing punch_hole
+	#print "-"*50
+	#print_frame(test_disk2, spacing = 2)
+	
 	#test_plot = mk_plot
 	#significance = is_significant(frame_one, (15, 15), 1)
 	
 	#plot_flux_vs_pos(frame_one, max_pixel, 3)
-	y_points = light_curve(frame_one, max_pixel)
-	slopes = plot_slopes(y_points)	
-	ratios = flux_ratios(y_points)
+	#y_points = light_curve(frame_one, max_pixel)
+	#slopes = plot_slopes(y_points)	
+	#ratios = flux_ratios(y_points)
 	print "slopes", slopes
 	print "ratios", ratios
 	print "sinal-to-noise ratios by annulus", signal_to_noise(frame_one, inverted_frame, y_points)
