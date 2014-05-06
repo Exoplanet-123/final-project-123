@@ -349,17 +349,6 @@ def print_frame(frame, spacing = 1, num_sigfigs = 0):
 				print "0", " " * (spacing - 1),
 		print ""
 
-def plot_flux_vs_pos(frame, center_tuple, radius):
-	plt.figure(1)
-	annuli = np.arange(radius+1)
-	#print "annuli", annuli
-	avg_flux = [frame[center_tuple]]
-	for annulus in annuli[:len(annuli)-1]:
-		avg_flux.append(np.mean(get_annulus_frames(frame, center_tuple, annulus+1)))
-		print annulus, get_annulus_frames(frame, center_tuple, annulus+1)
-	plt.plot(annuli, avg_flux)
-	plt.show()
-
 #Plots light curve with respect to a given pixel as the origin
 #Saves image in images folder
 def light_curve(frame, index_tuple, max_radius = 5):
@@ -447,29 +436,20 @@ def calculate_avg_flux(frame_list, avg_max_pixel, radius, is_signal):
 	avg_frame_flux = avg_frame_flux/len(frame_list)
 	return avg_frame_flux
 
-def rms_xy(frame, max_pixel, radius):
-	i = max_pixel[0]
-	j = max_pixel[1]
-	mean = frame[i][j]
-
-	rms_x = 0
-	rms_y = 0
-
-	row_pixels = []
-	col_pixels = []
-
-	for pixel in frame[i][j-radius:j+radius+1]:
-		row_pixels.append(pixel*pixel)
-	rms_x = np.mean(row_pixels)
-
-	for pixel in frame.T[j-radius:j+radius+1]:
-		col_pixels.append(pixel*pixel)
-	rms_y = np.mean(col_pixels)
-
-	return (rms_x, rms_y)
-
 def weighting_function(max_flux, radius)
-	weight = max_flux
+	weight = exp(-(radius*radius)/(2*0.45*3.6*F_NUM))
+
+def calculate_noise_flux(frame, avg_max_pixel, radius)
+	total_noise_flux = 0
+	for annulus in range(radius, len(frame[0])/2)):
+		weight = weighting_function(frame[avg_max_pixel[0]][avg_max_pixel[1]], radius)
+		total_flux += sum(thick_ring(frame, avg_max_pixel, annulus, annulus+1))
+	return total_noise_flux
+
+def calculate_avg_noise(frame_list, avg_max_pixel, radius)
+	for frame in frame_list:
+		noise_flux = 0
+		
 
 def test_aperture(frame, center_tuple, radius):
 	pass
@@ -511,13 +491,13 @@ def main():
 	#noise_frame = punch_hole(frame_one, avg_max_pixel, 4)
 	#print_frame(noise_frame, spacing = 2)
 
-	#avg_flux = calculate_avg_flux(frame_list, avg_max_pixel, 2, True)
-	#avg_noise = calculate_avg_flux(frame_list, avg_max_pixel, 2, False)
-	#print "average noise", avg_noise
-	#print "average flux", avg_flux
+	flux = calculate_avg_flux(frame_list, avg_max_pixel, 2, True)
+	noise = calculate_noise_flux(frame_list, avg_max_pixel, 2, False)
+	print "average noise", avg_noise
+	print "average flux", avg_flux
 
-	#sig_noise_r4 = avg_flux/avg_noise
-	#print "signal-to-noise ratio for a radius of 4:", sig_noise_r4
+	sig_noise_r4 = avg_flux/avg_noise
+	print "signal-to-noise ratio for a radius of 4:", sig_noise_r4
 
 	#test_disk2 = punch_hole(frame_one, max_pixel, radius = 4)
 	
