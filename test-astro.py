@@ -11,12 +11,6 @@ import math
 import matplotlib.pyplot as plt
 import PIL
 import Image
-#import sklearn.cluster as sk
-#from sklearn import metrics
-#from sklearn.cluster import KMeans
-#from sklearn.datasets import load_digits
-#from sklearn.decomposition import PCA
-#from sklearn.preprocessing import scale
 
 NUM_ROWS = 32
 NUM_COLS = 32
@@ -68,7 +62,6 @@ def avg_brightest_region(frame_list):
 	brightest_ind_total = [sum(x) for x in zip(*brightest_indices)]
 	avg_brightest_ind = (brightest_ind_total[0]/len(frame_list), brightest_ind_total[1]/len(frame_list))
 	return avg_brightest_ind
-
 
 #Returns data with items not lying on circle (of given radius) masked by zero
 #Uses the Bresenham Circle Algorithm to draw nice looking circles in taxicab geometry
@@ -130,8 +123,7 @@ def mk_disk(frame, center_tuple, radius):
 		new_frame.append(n_row)
 	return np.array(new_frame)
 
-
-#Gives inversion of the mk_disk function (zeros in the center)
+#Inversion of the mk_disk function (zeros in the center)
 def punch_hole(frame, center_tuple, radius):
 	new_frame = []
 	frame_list_form = np.ndarray.tolist(frame)
@@ -151,7 +143,6 @@ def punch_hole(frame, center_tuple, radius):
 		new_frame.append(n_row)
 	return np.array(new_frame)
 
-
 #Merges frames, replacing zero elements in one frame with nonzero elements from the other
 #This function assumes no overlapping elements
 def frame_merge(frame1, frame2):
@@ -160,8 +151,7 @@ def frame_merge(frame1, frame2):
 		for j in range(NUM_COLS):
 			if frame2[i][j] != 0:
 				new_frame[i][j] = frame2[i][j]
-	return new_frame
-			
+	return new_frame	
 
 #Returns frame completely masked (by zeros) except for a ring with specified inner and outer radii
 def thick_ring(frame, center_tuple, inner_rad, outer_rad):
@@ -199,7 +189,6 @@ def thick_ring(frame, center_tuple, inner_rad, outer_rad):
 		new_frame.append(n_row)
 	return np.array(new_frame)
 
-
 #Print a fits frame as a pretty array of numbers
 def print_frame(frame, spacing = 1, num_sigfigs = 0):
 	for row in np.ndarray.tolist(frame):		
@@ -211,7 +200,7 @@ def print_frame(frame, spacing = 1, num_sigfigs = 0):
 				print "0", " " * (spacing - 1),
 		print ""
 
-
+#Writes frame to as an image to a png (ideally) file
 def numpy2image(new_filename, frame):
 	#Normalize frame luminosities to list in range 0 to 255
 	frame1 = frame/np.max(np.abs(frame))
@@ -221,7 +210,6 @@ def numpy2image(new_filename, frame):
 	new_img = Image.open(new_filename)
 	new_img = new_img.resize((288, 288), Image.BILINEAR)
 	new_img.save(new_filename)
-
 
 #Plots light curve with respect to a given pixel as the origin
 #Saves image in images folder
@@ -246,26 +234,22 @@ def light_curve(frame, index_tuple, max_radius = 5):
 	#plt.show()
 	return y_points
 
-
 #Returns the total flux in a disk created from the frame argument
 def calculate_frame_flux(frame, avg_max_pixel, radius):
 	disk = mk_disk(frame, avg_max_pixel, radius)
 	return sum(sum(disk))
-
 
 #Returns a weight by radius, based on a Gaussian function approximating a point spread function
 #Lower radii (closer in to the star) get a higher weight than those farther away
 def weighting_function(max_flux, radius):
 	return math.exp(-(radius*radius)/(2*0.45*WAVELENGTH*F_NUM))
 
-
 #Returns a penalty for using more radii (still refining best function to use)
 def penalty_function(radius):
 	return math.exp(radius - 5)
 
-
 #Returns the total noise in a frame (anything in a frame that is not the signal)
-#Total flux is calcuated by taking into account annuli of increasing radius and weighting the flux therein accordingly
+#Total flux is calculated by taking into account annuli of increasing radius and weighting the flux therein accordingly
 def calculate_noise_flux(frame, avg_max_pixel, radius):
 	total_noise_flux = 0
 	for annulus in range(radius, len(frame[0])/2):
@@ -273,7 +257,6 @@ def calculate_noise_flux(frame, avg_max_pixel, radius):
 		annulus_sum = sum(sum(thick_ring(frame, avg_max_pixel, annulus, annulus+1)))
 		total_noise_flux += weight*annulus_sum
 	return total_noise_flux
-
 
 #Returns numerical measurement describing quality of mask
 def frame_aperture(frame, max_pixel):
@@ -296,7 +279,6 @@ def avg_aperture(frame_list):
 		max_pixel = brightest_region(frame)
 		apertures.append(frame_aperture(frame, max_pixel))
 	return np.mean(apertures)
-
 
 def main():
 

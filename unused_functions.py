@@ -19,7 +19,7 @@ def rms_xy(frame, max_pixel, radius):
 
 	return (rms_x, rms_y)
 
-def weighting_function(max_flux, radius)
+def weighting_function(max_flux, radius):
 	weight = max_flux
 
 #Takes numpy array, returns index of brightest pixel
