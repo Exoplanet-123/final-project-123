@@ -212,3 +212,25 @@ def signal_to_noise(frame, inverted_frame, annulus_flux):
 
 	return ratios
 
+
+def calculate_avg_flux(frame_list, avg_max_pixel, radius, is_signal):
+	avg_frame_flux = 0
+	for frame in frame_list:
+		if is_signal:
+			disk = mk_disk(frame, avg_max_pixel, radius)
+		else:
+			disk = punch_hole(frame, avg_max_pixel, radius)
+		frame_flux = 0
+		for row in disk:
+			for flux in row:
+				if flux > 0:
+					frame_flux += flux
+		avg_frame_flux += frame_flux
+	avg_frame_flux = avg_frame_flux/len(frame_list)
+	return avg_frame_flux
+
+
+def calculate_avg_noise(frame_list, avg_max_pixel, radius):
+	for frame in frame_list:
+		noise_flux = 0
+	pass

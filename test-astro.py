@@ -247,36 +247,6 @@ def light_curve(frame, index_tuple, max_radius = 5):
 	return y_points
 
 
-#Returns numerical measurement describing quality of mask
-def aperture_metric(frame, mask):
-	#Qualities we want in a mask:
-		#Conserves valuable information.
-			#What information is valuable?
-			#Information in a moderately sized cluster of similar values;
-			#High pixel spread; high brightness
-			#Possibility: find a bright pixel whose neighbors have luminosities above the average
-			#This can be recursive up to some number of levels (must be finite)
-			#Such a pixel is a good candidate for being non-noise, depending on recursion level
-	pass
-
-
-def calculate_avg_flux(frame_list, avg_max_pixel, radius, is_signal):
-	avg_frame_flux = 0
-	for frame in frame_list:
-		if is_signal:
-			disk = mk_disk(frame, avg_max_pixel, radius)
-		else:
-			disk = punch_hole(frame, avg_max_pixel, radius)
-		frame_flux = 0
-		for row in disk:
-			for flux in row:
-				if flux > 0:
-					frame_flux += flux
-		avg_frame_flux += frame_flux
-	avg_frame_flux = avg_frame_flux/len(frame_list)
-	return avg_frame_flux
-
-
 #Returns the total flux in a disk created from the frame argument
 def calculate_frame_flux(frame, avg_max_pixel, radius):
 	disk = mk_disk(frame, avg_max_pixel, radius)
@@ -291,7 +261,7 @@ def weighting_function(max_flux, radius):
 
 #Returns a penalty for using more radii (still refining best function to use)
 def penalty_function(radius):
-	return math.exp(radius - 5.0)
+	return math.exp(radius - 5)
 
 
 #Returns the total noise in a frame (anything in a frame that is not the signal)
@@ -305,14 +275,27 @@ def calculate_noise_flux(frame, avg_max_pixel, radius):
 	return total_noise_flux
 
 
-def calculate_avg_noise(frame_list, avg_max_pixel, radius):
+#Returns numerical measurement describing quality of mask
+def frame_aperture(frame, max_pixel):
+	best_aperture = 0
+	best_signal_to_noise = 0	
+	for aperture_radius in range(1, len(frame)/2):
+		noise = calculate_noise_flux(frame, max_pixel, aperture_radius)
+		signal = calculate_frame_flux(frame, max_pixel, aperture_radius)
+		signal_to_noise = signal/noise - penalty_function(aperture_radius)
+		#print "signal-to-noise ratio for a radius of " + str(radius) + " in frame one:", sig_noise_r4
+		if signal_to_noise > best_signal_to_noise:
+			best_signal_to_noise = signal_to_noise
+			best_aperture = aperture_radius
+
+	return best_aperture
+
+def avg_aperture(frame_list):
+	apertures = []
 	for frame in frame_list:
-		noise_flux = 0
-	pass
-
-def test_aperture(frame, center_tuple, radius):
-	pass
-
+		max_pixel = brightest_region(frame)
+		apertures.append(frame_aperture(frame, max_pixel))
+	return np.mean(apertures)
 
 
 def main():
@@ -320,63 +303,15 @@ def main():
 	fits_file = "Exoplanet123_Prototype/SPITZER_I1_41629440_0000_0000_1_bcd.fits"
 	hdulist = fits.open(fits_file)
 	frame_list = hdulist[0].data
-	frame_one = frame_list[0]
+	#frame_one = frame_list[0]
 	
-	#noise_file = "Exoplanet123_Prototype/SPITZER_I1_41608704_0000_1_C8734032_sdark.fits"
-	#noiselist = fits.open(noise_file)
-	#noise_list = noiselist[0].data
-	#noise_one = noise_list[0]
+	best_ap = avg_aperture(frame_list)
+	print "best aperture for frame list:", best_ap
 
-	#Prints a version of the star with center at brightest region, and radius r
-	avg_max_pixel = avg_brightest_region(frame_list)
-	print "average maximum pixel location", avg_max_pixel
-	#test_disk = mk_disk(frame_one, max_pixel, radius = 4)
-	#test_noise_disk = mk_disk(noise_one, max_pixel, radius = 4)
-
-	#avg_noise = calculate_avg_flux(noise_list, avg_max_pixel, radius = 1)
-	#noise_frame = punch_hole(frame_one, avg_max_pixel, 4)
-	#print_frame(noise_frame, spacing = 2)
-
-	radius = 1
-
-	noise_frame = calculate_noise_flux(frame_one, avg_max_pixel, radius)
-	print "weighted noise in frame one", noise_frame
-	flux_frame = calculate_frame_flux(frame_one, avg_max_pixel, radius)
-	print "flux from frame on", flux_frame
-	#flux = calculate_avg_flux(frame_list, avg_max_pixel, 2, True)
-	#noise = calculate_noise_flux(frame_list, avg_max_pixel, 2, False)
-	#print "average noise", avg_noise
-	#print "average flux", avg_flux
-
-	sig_noise_r4 = flux_frame/noise_frame - penalty_function(radius)
-	print "signal-to-noise ratio for a radius of " + str(radius) + " in frame one:", sig_noise_r4
-
-	#test_disk2 = punch_hole(frame_one, max_pixel, radius = 4)
-	
-	#thick = thick_ring(frame_one, avg_max_pixel, 4,7)
-	#print_frame(thick, spacing = 2)
-	
 	#print_frame(test_disk, spacing = 2)
-	#print_frame(test_noise_disk, spacing = 2)
-	#Testing punch_hole
-	#print "-"*50
-	#print_frame(test_disk2, spacing = 2)
 	
-	
-	#test_plot = mk_plot
-	#significance = is_significant(frame_one, (15, 15), 1)
-	
-	#plot_flux_vs_pos(frame_one, max_pixel, 3)
-	#y_points = light_curve(frame_one, max_pixel)
-	#slopes = plot_slopes(y_points)	
-	#ratios = flux_ratios(y_points)
-	#print "slopes", slopes
-	#print "ratios", ratios
-	#print "sinal-to-noise ratios by annulus", signal_to_noise(frame_one, inverted_frame, y_points)
 	#numpy2image("images/frame_one.png", frame_one)
 	#numpy2image("images/frame_one_mask_rad_2.png", test_disk)
-	
-	#annulus_frames = get_annulus_frames(frame_one, max_pixel, 2)
 	
 	#subprocess.call(["ds9", "-zoom","8", fits_file])
 
