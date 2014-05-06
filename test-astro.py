@@ -282,7 +282,7 @@ def avg_aperture(frame_list):
 
 def main():
 
-	fits_file = "Exoplanet123_Prototype/SPITZER_I1_41629440_0000_0000_1_bcd.fits"
+	fits_file = "prototype_data/SPITZER_I1_41629440_0000_0000_1_bcd.fits"
 	hdulist = fits.open(fits_file)
 	frame_list = hdulist[0].data
 	#frame_one = frame_list[0]
