@@ -1,3 +1,7 @@
 #Aperture Calculator Prototype
 
+Data from the _Spitzer Space Telescope_ looks like a series of many frames (of order 10^4), each of which include the star-plus-planet system of interest. An improtant question to answer when analyzing this data is how much of each frame to include in an analysis. If too much of the frame is used then abundant background noise is included and a result will have large uncertainties. If too little is included then important information from the system could be eliminated, which could lead to a "wrong" result.
 
+To determine how much of a frame to include, a circle, or aperture, is drawn around the system and tested for residual noise. Currently the method of determining the best aperture involves testing several apertures, running full simulations, and comparing the different residual noise values. This process can take many involved hours in which no knowledge of the system or the instrument systematics are gained. We aim to find a decent proxy for proividing a narrow lower and upper bound for possible best apertures for a given dataset. A successful algorithm can be applied to multiple star systems in multiple wavelengths, and run without human involvement after initialization.
+
+From the development of this prototytpe we learned a lot about the structure of the data. We focus on a single basic calibrated data (BCD) file taken by _Spitzer_ of the exoplanet HD 209458b in a wavelength bandpass centered on 3.6 microns. 
