@@ -7,6 +7,7 @@ import scipy
 import ds9
 import subprocess
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 import PIL
 import Image
@@ -24,32 +25,8 @@ NUM_COLS = 32
 FOCAL_LENGTH = 10.2		#meters
 DIAMETER = 0.85				#meters
 F_NUM = FOCAL_LENGTH/DIAMETER
+WAVELENGTH = 3.6			#microns
 
-#Converts frames into a manageable unit: MegaJanskys per Arc
-def flux_convert(hdu_list, frame_num):
-	pixel_rows = hdu_list[0].header['pxscal1']  # arcseconds per pixel (1D)
-	pixel_columns = hdu_list[0].header['pxscal2'] # arcseconds per pixel (1D)
-	pixel = pixel_rows*pixel_columns  # arcseconds^2 per pixel (2D)
-	converted_frame = []
-	for row in hdu_list[0].data[frame_num]:
-		n_row = []
-		for element in row:
-			MJy_per_arc2 = element*2.35045E-11
-			MJy_per_pix = MJy_per_arc2*pixel
-			n_row.append(MJy_per_pix)
-		converted_frame.append(n_row)
-	return np.array(converted_frame)
-
-#Takes numpy array, returns index of brightest pixel
-def brightest_pixel(frame):
-	max_ind = (0, 0)
-	brightest = 0
-	for i in range(len(frame)):
-		for j in range(len(frame[i])):
-			if frame[i][j] > brightest:
-				brightest = frame[i][j]
-				max_ind = (i, j)
-	return max_ind
 
 #Find 2x2 area with greatest total luminosity
 #Return index of brightest pixel in the 2x2 area
@@ -82,6 +59,7 @@ def brightest_region(frame):
 					best_ind = (i + 1, j + 1)
 	return best_ind
 
+#Returns the index of the brightest region across a list of frames
 def avg_brightest_region(frame_list):
 	brightest_indices = []
 	#avg_brightest_ind = (0, 0)
@@ -91,126 +69,6 @@ def avg_brightest_region(frame_list):
 	avg_brightest_ind = (brightest_ind_total[0]/len(frame_list), brightest_ind_total[1]/len(frame_list))
 	return avg_brightest_ind
 
-#Returns up to 8 neighbors of a pixel at radius 1 
-#Handles edge cases silently
-#Gives neighbors in a square, NOT a circle
-def frame_neighbors(frame, index_tuple):
-	i = index_tuple[0]
-	j = index_tuple[1]
-	min_bd = 0
-	level = 1
-	left_bd = NUM_ROWS - 1
-	right_bd = NUM_COLS - 1
-	#Handling the twelve standard edge cases for a grid
-	if i != min_bd and j != min_bd and i != left_bd and j != right_bd:
-		A = frame[i - level, j - level]
-		B = frame[i, j - level]
-		C = frame[i + level, j - level]
-		D = frame[i - level, j]
-		E = frame[i + level, j]
-		F = frame[i - level, j + level]
-		G = frame[i, j + level]
-		H = frame[i + level, j + level]
-		return [A, B, C, D, E, F, G, H]
-	elif i == min_bd and j != min_bd and i != left_bd and j != right_bd:
-		B = frame[i, j - level]
-		C = frame[i + level, j - level]
-		D = frame[i + level, j]
-		E = frame[i, j + level]
-		F = frame[i + level, j + level]
-		return [B,C,D,E,F]
-	elif i != min_bd and j == min_bd and i != left_bd and j != right_bd:
-		D = frame[i - level, j]
-		E = frame[i + level, j]
-		F = frame[i - level, j + 1]
-		G = frame[i, j + level]
-		H = frame[i + level, j + level]
-		return [D, E, F, G, H]
-	elif i == min_bd and j == min_bd and i != left_bd and j != right_bd:
-		D = frame[i + level, j]
-		E = frame[i, j + level]
-		F = frame[i + level, j + level]
-		return [D, E, F]
-	elif i != min_bd and j != min_bd and i == left_bd and j != right_bd:
-		A = frame[i - level, j - level]
-		B = frame[i, j - level]
-		C = frame[i - level, j]
-		D = frame[i - level, j + level]
-		E = frame[i, j + level]
-		return [A, B, C, D, E]
-	elif i != min_bd and j != min_bd and i != left_bd and j == right_bd:
-		A = frame[i - level, j - level]
-		B = frame[i, j - level]
-		C = frame[i + level, j - level]
-		D = frame[i - level, j]
-		E = frame[i + level, j]
-		return [A, B, C, D, E]
-	elif i != min_bd and j != min_bd and i == left_bd and j == right_bd:
-		A = frame[i - level, j - level]
-		B = frame[i, j - level]
-		C = frame[i - level, j]
-		return [A, B, C]
-	elif i == min_bd and j != min_bd and i != left_bd and j == right_bd:
-		A = frame[i, j - level]
-		B = frame[i + level, j - level]
-		D = frame[i + level, j]
-		return [A, B, D]
-	elif i != min_bd and j == min_bd and i == left_bd and j != right_bd:
-		A = frame[i - level, j]
-		B = frame[i - level, j + level]
-		C = frame[i, j + level]
-		return [A, B, C]
-	else:
-		print "Error in frame neighbor computer."
-
-#Returns neighbors of a pixel at arbitrary radius
-#Neighbors are returned in a circle rather than a square
-def frame_neighbors_n(frame, index_tuple, level=1):
-	if level == 0:
-		return [frame[index_tuple]]
-	if level == 1:
-		return frame_neighbors(frame, index_tuple)
-	masked_frame = mk_circle(frame, index_tuple, level)
-	rv = masked_frame[np.nonzero(masked_frame)]
-	return rv
-
-def get_annulus_frames(frame, center_tuple, annulus_num):
-	i = center_tuple[0]
-	j = center_tuple[1]
-	annulus_frames = []
-	x_shift = range(i - annulus_num, i + annulus_num+1)
-	y_shift = range(j - annulus_num+1, j + annulus_num)
-	for x in x_shift:
-		if frame[x, j - annulus_num] != 0:
-			annulus_frames.append(frame[x, j - annulus_num])
-		if frame[x, j + annulus_num] != 0:
-			annulus_frames.append(frame[x, j + annulus_num])
-	for y in y_shift:
-		if frame [i - annulus_num, y] != 0:
-			annulus_frames.append(frame[i - annulus_num, y])
-		if frame [i + annulus_num, y] != 0:
-			annulus_frames.append(frame[i + annulus_num, y])
-	return annulus_frames
-
-#Takes numpy array, index of pixel in question, and integer number of standard deviations
-#If pixel in question and its immediate neighbors are n SD outside of the mean, the pixel is considered 'significant'
-def is_significant(frame, index_tuple, deviations = 1, mean = -1, SD = -1):
-	if mean == -1 or SD == -1:
-		frame_mean = np.mean(frame)
-		#print frame_mean
-		frame_SD = np.std(frame)
-		#print frame_SD
-	else:
-		frame_mean = mean
-		frame_SD = SD
-	lower_bound = frame_mean + deviations * frame_SD
-	if frame[index_tuple] > lower_bound:
-		neighbors = frame_neighbors(frame, index_tuple)
-		for nbr in neighbors:
-			if nbr <= lower_bound:
-				return False
-		return True
-	return False
 
 #Returns data with items not lying on circle (of given radius) masked by zero
 #Uses the Bresenham Circle Algorithm to draw nice looking circles in taxicab geometry
@@ -272,7 +130,8 @@ def mk_disk(frame, center_tuple, radius):
 		new_frame.append(n_row)
 	return np.array(new_frame)
 
-#Gives inversion of the mk_disk function
+
+#Gives inversion of the mk_disk function (zeros in the center)
 def punch_hole(frame, center_tuple, radius):
 	new_frame = []
 	frame_list_form = np.ndarray.tolist(frame)
@@ -292,6 +151,7 @@ def punch_hole(frame, center_tuple, radius):
 		new_frame.append(n_row)
 	return np.array(new_frame)
 
+
 #Merges frames, replacing zero elements in one frame with nonzero elements from the other
 #This function assumes no overlapping elements
 def frame_merge(frame1, frame2):
@@ -302,6 +162,7 @@ def frame_merge(frame1, frame2):
 				new_frame[i][j] = frame2[i][j]
 	return new_frame
 			
+
 #Returns frame completely masked (by zeros) except for a ring with specified inner and outer radii
 def thick_ring(frame, center_tuple, inner_rad, outer_rad):
 	new_frame = []
@@ -338,6 +199,7 @@ def thick_ring(frame, center_tuple, inner_rad, outer_rad):
 		new_frame.append(n_row)
 	return np.array(new_frame)
 
+
 #Print a fits frame as a pretty array of numbers
 def print_frame(frame, spacing = 1, num_sigfigs = 0):
 	for row in np.ndarray.tolist(frame):		
@@ -349,8 +211,21 @@ def print_frame(frame, spacing = 1, num_sigfigs = 0):
 				print "0", " " * (spacing - 1),
 		print ""
 
+
+def numpy2image(new_filename, frame):
+	#Normalize frame luminosities to list in range 0 to 255
+	frame1 = frame/np.max(np.abs(frame))
+	frame1 *= 255
+	im = Image.fromarray(np.uint8(frame1))
+	im.save(new_filename)
+	new_img = Image.open(new_filename)
+	new_img = new_img.resize((288, 288), Image.BILINEAR)
+	new_img.save(new_filename)
+
+
 #Plots light curve with respect to a given pixel as the origin
 #Saves image in images folder
+#Returns a list of the average fluxes plotted
 def light_curve(frame, index_tuple, max_radius = 5):
 	x_points = []
 	y_points = []
@@ -371,23 +246,6 @@ def light_curve(frame, index_tuple, max_radius = 5):
 	#plt.show()
 	return y_points
 
-def plot_slopes(y_points):
-	slopes = []
-	for y in range(len(y_points)):
-		if y == len(y_points)-1:
-			break
-		else:
-			slopes.append(y_points[y+1] - y_points[y])
-	return slopes
-
-def flux_ratios(fluxes):
-	ratios = []
-	for flux in range(len(fluxes)):
-		if flux == len(fluxes)-1:
-			break
-		else:
-			ratios.append(fluxes[flux]/fluxes[flux+1])
-	return ratios
 
 #Returns numerical measurement describing quality of mask
 def aperture_metric(frame, mask):
@@ -401,24 +259,6 @@ def aperture_metric(frame, mask):
 			#Such a pixel is a good candidate for being non-noise, depending on recursion level
 	pass
 
-def signal_to_noise(frame, inverted_frame, annulus_flux):
-	return
-	avg_noise = 0
-	length = 0
-	for noise in inverted_frame:
-		#Some flux values for the background are negative. 
-		#This is not a realistic measurement and is more likely a dead pixel. 
-		#We do not want to include these in our average background noise
-		if noise > 0:
-			avg_noise += noise
-			length += 1
-	avg_noise += 1
-
-	ratios = []
-	for flux in annulus_flux:
-		ratios.append(flux/avg_noise)
-
-	return ratios
 
 def calculate_avg_flux(frame_list, avg_max_pixel, radius, is_signal):
 	avg_frame_flux = 0
@@ -436,33 +276,44 @@ def calculate_avg_flux(frame_list, avg_max_pixel, radius, is_signal):
 	avg_frame_flux = avg_frame_flux/len(frame_list)
 	return avg_frame_flux
 
-def weighting_function(max_flux, radius)
-	weight = exp(-(radius*radius)/(2*0.45*3.6*F_NUM))
 
-def calculate_noise_flux(frame, avg_max_pixel, radius)
+#Returns the total flux in a disk created from the frame argument
+def calculate_frame_flux(frame, avg_max_pixel, radius):
+	disk = mk_disk(frame, avg_max_pixel, radius)
+	return sum(sum(disk))
+
+
+#Returns a weight by radius, based on a Gaussian function approximating a point spread function
+#Lower radii (closer in to the star) get a higher weight than those farther away
+def weighting_function(max_flux, radius):
+	return math.exp(-(radius*radius)/(2*0.45*WAVELENGTH*F_NUM))
+
+
+#Returns a penalty for using more radii (still refining best function to use)
+def penalty_function(radius):
+	return math.exp(radius - 5.0)
+
+
+#Returns the total noise in a frame (anything in a frame that is not the signal)
+#Total flux is calcuated by taking into account annuli of increasing radius and weighting the flux therein accordingly
+def calculate_noise_flux(frame, avg_max_pixel, radius):
 	total_noise_flux = 0
-	for annulus in range(radius, len(frame[0])/2)):
-		weight = weighting_function(frame[avg_max_pixel[0]][avg_max_pixel[1]], radius)
-		total_flux += sum(thick_ring(frame, avg_max_pixel, annulus, annulus+1))
+	for annulus in range(radius, len(frame[0])/2):
+		weight = weighting_function(frame[avg_max_pixel[0]][avg_max_pixel[1]], annulus)
+		annulus_sum = sum(sum(thick_ring(frame, avg_max_pixel, annulus, annulus+1)))
+		total_noise_flux += weight*annulus_sum
 	return total_noise_flux
 
-def calculate_avg_noise(frame_list, avg_max_pixel, radius)
+
+def calculate_avg_noise(frame_list, avg_max_pixel, radius):
 	for frame in frame_list:
 		noise_flux = 0
-		
+	pass
 
 def test_aperture(frame, center_tuple, radius):
 	pass
 
-def numpy2image(new_filename, frame):
-	#Normalize frame luminosities to list in range 0 to 255
-	frame1 = frame/np.max(np.abs(frame))
-	frame1 *= 255
-	im = Image.fromarray(np.uint8(frame1))
-	im.save(new_filename)
-	new_img = Image.open(new_filename)
-	new_img = new_img.resize((288, 288), Image.BILINEAR)
-	new_img.save(new_filename)
+
 
 def main():
 
@@ -482,27 +333,28 @@ def main():
 	#test_disk = mk_disk(frame_one, max_pixel, radius = 4)
 	#test_noise_disk = mk_disk(noise_one, max_pixel, radius = 4)
 
-	test_disk = mk_disk(frame_one, avg_max_pixel, radius = 4)
-
-	rms = rms_xy(test_disk, (15,15), 4)
-	print "rms values", rms
-
 	#avg_noise = calculate_avg_flux(noise_list, avg_max_pixel, radius = 1)
 	#noise_frame = punch_hole(frame_one, avg_max_pixel, 4)
 	#print_frame(noise_frame, spacing = 2)
 
-	flux = calculate_avg_flux(frame_list, avg_max_pixel, 2, True)
-	noise = calculate_noise_flux(frame_list, avg_max_pixel, 2, False)
-	print "average noise", avg_noise
-	print "average flux", avg_flux
+	radius = 1
 
-	sig_noise_r4 = avg_flux/avg_noise
-	print "signal-to-noise ratio for a radius of 4:", sig_noise_r4
+	noise_frame = calculate_noise_flux(frame_one, avg_max_pixel, radius)
+	print "weighted noise in frame one", noise_frame
+	flux_frame = calculate_frame_flux(frame_one, avg_max_pixel, radius)
+	print "flux from frame on", flux_frame
+	#flux = calculate_avg_flux(frame_list, avg_max_pixel, 2, True)
+	#noise = calculate_noise_flux(frame_list, avg_max_pixel, 2, False)
+	#print "average noise", avg_noise
+	#print "average flux", avg_flux
+
+	sig_noise_r4 = flux_frame/noise_frame - penalty_function(radius)
+	print "signal-to-noise ratio for a radius of " + str(radius) + " in frame one:", sig_noise_r4
 
 	#test_disk2 = punch_hole(frame_one, max_pixel, radius = 4)
 	
-	thick = thick_ring(frame_one, avg_max_pixel, 4,7)
-	print_frame(thick, spacing = 2)
+	#thick = thick_ring(frame_one, avg_max_pixel, 4,7)
+	#print_frame(thick, spacing = 2)
 	
 	#print_frame(test_disk, spacing = 2)
 	#print_frame(test_noise_disk, spacing = 2)
@@ -528,13 +380,6 @@ def main():
 	
 	#subprocess.call(["ds9", "-zoom","8", fits_file])
 
-	avg_max_pixel = 0
-	for i in frame_list:
-		brightest_pixel_index = brightest_region(i)
-		avg_max_pixel += i[brightest_pixel_index[0]][brightest_pixel_index[1]]
-
-	avg_max_pixel = avg_max_pixel/len(frame_list)
-	print avg_max_pixel
 
 if __name__ == "__main__":
 	main()
