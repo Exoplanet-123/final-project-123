@@ -379,10 +379,13 @@ def signal_to_noise(frame, inverted_frame, annulus_flux):
 
 	return ratios
 
-def calculate_avg_flux(frame_list, avg_max_pixel, radius):
+def calculate_avg_flux(frame_list, avg_max_pixel, radius, is_signal):
 	avg_frame_flux = 0
 	for frame in frame_list:
-		disk = mk_disk(frame, avg_max_pixel, radius)
+		if is_signal:
+			disk = mk_disk(frame, avg_max_pixel, radius)
+		else:
+			disk = punch_hole(frame, avg_max_pixel, radius)
 		frame_flux = 0
 		for row in disk:
 			for flux in row:
@@ -411,10 +414,10 @@ def main():
 	frame_list = hdulist[0].data
 	frame_one = frame_list[0]
 	
-	noise_file = "Exoplanet123_Prototype/SPITZER_I1_41608704_0000_1_C8734032_sdark.fits"
-	noiselist = fits.open(noise_file)
-	noise_list = noiselist[0].data
-	noise_one = noise_list[0]
+	#noise_file = "Exoplanet123_Prototype/SPITZER_I1_41608704_0000_1_C8734032_sdark.fits"
+	#noiselist = fits.open(noise_file)
+	#noise_list = noiselist[0].data
+	#noise_one = noise_list[0]
 
 
 	#Prints a version of the star with center at brightest region, and radius r
@@ -423,8 +426,12 @@ def main():
 	#test_disk = mk_disk(frame_one, max_pixel, radius = 4)
 	#test_noise_disk = mk_disk(noise_one, max_pixel, radius = 4)
 
-	avg_noise = calculate_avg_flux(noise_list, avg_max_pixel, radius = 1)
-	avg_flux = calculate_avg_flux(frame_list, avg_max_pixel, radius = 1)
+	#avg_noise = calculate_avg_flux(noise_list, avg_max_pixel, radius = 1)
+	#noise_frame = punch_hole(frame_one, avg_max_pixel, 4)
+	#print_frame(noise_frame, spacing = 2)
+
+	avg_flux = calculate_avg_flux(frame_list, avg_max_pixel, 2, True)
+	avg_noise = calculate_avg_flux(frame_list, avg_max_pixel, 2, False)
 	print "average noise", avg_noise
 	print "average flux", avg_flux
 
