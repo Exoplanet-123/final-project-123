@@ -7,7 +7,7 @@ The _Spitzer Space Telescope_ has recently been used to observe exoplanets. Data
 ![Unmasked](images/frame_one.png) --- ![Masked](images/frame_one_mask_rad_2.png)
 
 
-Our immediate purpose is to find intelligent, time-dependent aperture sizes for stellar observations using _Spitzer_, which reduce noise but conserve valuable star-and-planet system information. The ultimate goal is to to produce the optimal aperture size for a considerable number of stars (each star has 4x ~5 GB worth of images, when accounting for the four detectors on _Spitzer_). Aa a check, we can compare models existing in the literature to a model output based on our aperture calculations. 
+Our immediate purpose is to find intelligent, time-dependent aperture sizes for stellar observations using _Spitzer_, which reduce noise but conserve valuable star-and-planet system information. The ultimate goal is to to produce the optimal aperture size for a considerable number of stars (each star has 4x ~5 GB worth of images, when accounting for the four detectors on _Spitzer_). As a check, we can compare models existing in the literature to a model output based on our aperture calculations. 
 
 #####Instructions for Prototype Use
 The primary script for aperture calculation can be run using
