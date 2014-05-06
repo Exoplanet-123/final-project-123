@@ -241,7 +241,7 @@ def calculate_frame_flux(frame, avg_max_pixel, radius):
 
 #Returns a weight by radius, based on a Gaussian function approximating a point spread function
 #Lower radii (closer in to the star) get a higher weight than those farther away
-def weighting_function(max_flux, radius):
+def weighting_function(radius):
 	return math.exp(-(radius*radius)/(2*0.45*WAVELENGTH*F_NUM))
 
 #Returns a penalty for using more radii (still refining best function to use)
