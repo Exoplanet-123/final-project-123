@@ -272,6 +272,7 @@ def mk_disk(frame, center_tuple, radius):
 		new_frame.append(n_row)
 	return np.array(new_frame)
 
+#Gives inversion of the mk_disk function
 def punch_hole(frame, center_tuple, radius):
 	new_frame = []
 	frame_list_form = np.ndarray.tolist(frame)
@@ -288,6 +289,52 @@ def punch_hole(frame, center_tuple, radius):
 				indB = j
 				break
 		n_row = frame_list_form[row_num][0:indA] + circle_frame[row_num][indA:indB] + frame_list_form[row_num][indB:]
+		new_frame.append(n_row)
+	return np.array(new_frame)
+
+#Merges frames, replacing zero elements in one frame with nonzero elements from the other
+#This function assumes no overlapping elements
+def frame_merge(frame1, frame2):
+	new_frame = frame1
+	for i in range(NUM_ROWS):
+		for j in range(NUM_COLS):
+			if frame2[i][j] != 0:
+				new_frame[i][j] = frame2[i][j]
+	return new_frame
+			
+#Returns frame completely masked (by zeros) except for a ring with specified inner and outer radii
+def thick_ring(frame, center_tuple, inner_rad, outer_rad):
+	new_frame = []
+	#flf stands for frame_list_form
+	flf = np.ndarray.tolist(frame)
+	#Combine the punch_hole and mk_disk functions
+	outer_circle = np.ndarray.tolist(mk_circle(frame, center_tuple, outer_rad))
+	inner_circle = np.ndarray.tolist(mk_circle(frame, center_tuple, inner_rad))
+	cf = frame_merge(inner_circle, outer_circle) #cf stands for circle_frame
+	for row_num in range(len(cf)):
+		indA, indB = 16, 16
+		for i in range(31):
+			if cf[row_num][i] != 0:
+				indA = i
+				break
+		for j in range(31,16,-1):
+			if cf[row_num][j] != 0:
+				indB = j
+				break
+		indC, indD = indA, indB
+		for i in range(indA+2, 31):
+			if cf[row_num][i] != 0:
+				indC = i
+				break
+		for j in range(indB-2,0,-1):
+			if cf[row_num][j] != 0:
+				indD = j
+				break
+		if indD < indC:
+			n_row = cf[row_num][0:indA] + flf[row_num][indA:indB] + cf[row_num][indB:]
+			new_frame.append(n_row)
+			continue
+		n_row = cf[row_num][0:indA] + flf[row_num][indA:indC] + cf[row_num][indC:indD] + flf[row_num][indD:indB] + cf[row_num][indB:]
 		new_frame.append(n_row)
 	return np.array(new_frame)
 
@@ -464,20 +511,25 @@ def main():
 	#noise_frame = punch_hole(frame_one, avg_max_pixel, 4)
 	#print_frame(noise_frame, spacing = 2)
 
-	avg_flux = calculate_avg_flux(frame_list, avg_max_pixel, 2, True)
-	avg_noise = calculate_avg_flux(frame_list, avg_max_pixel, 2, False)
-	print "average noise", avg_noise
-	print "average flux", avg_flux
+	#avg_flux = calculate_avg_flux(frame_list, avg_max_pixel, 2, True)
+	#avg_noise = calculate_avg_flux(frame_list, avg_max_pixel, 2, False)
+	#print "average noise", avg_noise
+	#print "average flux", avg_flux
 
-	sig_noise_r4 = avg_flux/avg_noise
-	print "signal-to-noise ratio for a radius of 4:", sig_noise_r4
+	#sig_noise_r4 = avg_flux/avg_noise
+	#print "signal-to-noise ratio for a radius of 4:", sig_noise_r4
 
 	#test_disk2 = punch_hole(frame_one, max_pixel, radius = 4)
+	
+	thick = thick_ring(frame_one, avg_max_pixel, 4,7)
+	print_frame(thick, spacing = 2)
+	
 	#print_frame(test_disk, spacing = 2)
 	#print_frame(test_noise_disk, spacing = 2)
 	#Testing punch_hole
 	#print "-"*50
 	#print_frame(test_disk2, spacing = 2)
+	
 	
 	#test_plot = mk_plot
 	#significance = is_significant(frame_one, (15, 15), 1)
