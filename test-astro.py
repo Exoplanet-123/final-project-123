@@ -20,6 +20,11 @@ import Image
 NUM_ROWS = 32
 NUM_COLS = 32
 
+#Spitzer params:
+FOCAL_LENGTH = 10.2		#meters
+DIAMETER = 0.85				#meters
+F_NUM = FOCAL_LENGTH/DIAMETER
+
 #Converts frames into a manageable unit: MegaJanskys per Arc
 def flux_convert(hdu_list, frame_num):
 	pixel_rows = hdu_list[0].header['pxscal1']  # arcseconds per pixel (1D)
@@ -395,6 +400,30 @@ def calculate_avg_flux(frame_list, avg_max_pixel, radius, is_signal):
 	avg_frame_flux = avg_frame_flux/len(frame_list)
 	return avg_frame_flux
 
+def rms_xy(frame, max_pixel, radius):
+	i = max_pixel[0]
+	j = max_pixel[1]
+	mean = frame[i][j]
+
+	rms_x = 0
+	rms_y = 0
+
+	row_pixels = []
+	col_pixels = []
+
+	for pixel in frame[i][j-radius:j+radius+1]:
+		row_pixels.append(pixel*pixel)
+	rms_x = np.mean(row_pixels)
+
+	for pixel in frame.T[j-radius:j+radius+1]:
+		col_pixels.append(pixel*pixel)
+	rms_y = np.mean(col_pixels)
+
+	return (rms_x, rms_y)
+
+def weighting_function(max_flux, radius)
+	weight = max_flux
+
 def test_aperture(frame, center_tuple, radius):
 	pass
 
@@ -409,6 +438,7 @@ def numpy2image(new_filename, frame):
 	new_img.save(new_filename)
 
 def main():
+
 	fits_file = "Exoplanet123_Prototype/SPITZER_I1_41629440_0000_0000_1_bcd.fits"
 	hdulist = fits.open(fits_file)
 	frame_list = hdulist[0].data
@@ -419,12 +449,16 @@ def main():
 	#noise_list = noiselist[0].data
 	#noise_one = noise_list[0]
 
-
 	#Prints a version of the star with center at brightest region, and radius r
 	avg_max_pixel = avg_brightest_region(frame_list)
 	print "average maximum pixel location", avg_max_pixel
 	#test_disk = mk_disk(frame_one, max_pixel, radius = 4)
 	#test_noise_disk = mk_disk(noise_one, max_pixel, radius = 4)
+
+	test_disk = mk_disk(frame_one, avg_max_pixel, radius = 4)
+
+	rms = rms_xy(test_disk, (15,15), 4)
+	print "rms values", rms
 
 	#avg_noise = calculate_avg_flux(noise_list, avg_max_pixel, radius = 1)
 	#noise_frame = punch_hole(frame_one, avg_max_pixel, 4)
