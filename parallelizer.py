@@ -44,7 +44,7 @@ def parallelize_file_set(directory):
 		files_per_rank = len(input_files) / size
 		for process in range(size):
 			#Perform computations
-			if rank != (size - 1):
+			if process != (size - 1):
 				upper_bound = (process + 1) * files_per_rank
 			else:
 				upper_bound = (process + 1) * files_per_rank + remainder
