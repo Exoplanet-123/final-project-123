@@ -20,14 +20,14 @@ The current data set is contained in a single file located in the folder titled 
 
 
 
-Packages used will include:
-* [Hadoopy](http://www.hadoopy.com/en/latest/), a Python wrapper for Hadoop written in Cython.
+Technologies used include:
 * [Astropy](https://astropy.readthedocs.org/en/stable/overview.html), a popular astronomy library for Python which deals with .fits files, the standard data format for our Spitzer star observation data.
 * [SAOImage DS9](http://ds9.si.edu/site/Home.html), an Astronomical Data Visualization Application. Allows for direct viewing of the individual frames in .fits files
 * [Python Imaging Library](http://www.pythonware.com/products/pil/) for image file I/O and resizing
+* [MPI for Python](http://mpi4py.scipy.org/docs/usrman/), a Python library for message passing and parallelization.
 
-#####Timeline:
+#####Timeline (2014):
 * By May 6: Prototype will demonstrate aperture calculation algorithm on a single frame for a single star
 * By May 18: Expand algorithm's operation to consider time variation over frames
-* By May 25: Move algorithm into Hadoop framework, linked by Hadoopy
+* By May 25: Revise algorithm to be parallelizable in an MPI framework
 * By June 3: Final implementation of project which compares models, accompanied by visualizations and a writeup
