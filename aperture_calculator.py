@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import PIL
 import Image
 
+
 NUM_ROWS = 32
 NUM_COLS = 32
 
@@ -107,91 +108,83 @@ def mk_circle(frame, center_tuple, radius):
 #Adaptation of Bresenham Circle Algorithm for disks
 def mk_disk(frame, center_tuple, radius):
 	new_frame = []
-	frame_list_form = np.ndarray.tolist(frame)
-	circle_frame = np.ndarray.tolist(mk_circle(frame, center_tuple, radius))
-	for row_num in range(len(circle_frame)):
-		indA, indB = 16, 16
-		for i in range(16):
-			if circle_frame[row_num][i] != 0:
+	circle_frame = mk_circle(frame, center_tuple, radius)
+	for row_num in range(NUM_COLS):
+		indA, indB = NUM_ROWS/2, NUM_COLS/2 
+		for i in range(NUM_ROWS/2):
+			if circle_frame[row_num, i] != 0:
 				indA = i
 				break
-		for j in range(31,16,-1):
-			if circle_frame[row_num][j] != 0:
+		for j in range(NUM_COLS - 1, NUM_COLS/2, -1):
+			if circle_frame[row_num, j] != 0:
 				indB = j
 				break
-		n_row = circle_frame[row_num][0:indA] + frame_list_form[row_num][indA:indB] + circle_frame[row_num][indB:]
-		new_frame.append(n_row)
-	return np.array(new_frame)
+		n_row = np.concatenate([circle_frame[row_num, 0:indA], frame[row_num, indA:indB], circle_frame[row_num, indB:]])
+		new_frame.append(np.atleast_2d(n_row))
+	return np.vstack(tuple(new_frame))
 
 #Inversion of the mk_disk function (zeros in the center)
 def punch_hole(frame, center_tuple, radius):
 	new_frame = []
-	frame_list_form = np.ndarray.tolist(frame)
 	#Circle_frame has radius one pixel larger than what we want
-	circle_frame = np.ndarray.tolist(mk_circle(frame, center_tuple, radius + 1))
-	for row_num in range(len(circle_frame)):
-		indA, indB = 16, 16
-		for i in range(16):
-			if circle_frame[row_num][i] != 0:
+	circle_frame = mk_circle(frame, center_tuple, radius + 1)
+	for row_num in range(NUM_COLS):
+		indA, indB = NUM_ROWS/2, NUM_COLS/2
+		for i in range(NUM_ROWS/2):
+			if circle_frame[row_num, i] != 0:
 				indA = i
 				break
-		for j in range(31,16,-1):
-			if circle_frame[row_num][j] != 0:
+		for j in range(NUM_COLS-1, NUM_COLS/2, -1):
+			if circle_frame[row_num, j] != 0:
 				indB = j
 				break
-		n_row = frame_list_form[row_num][0:indA] + circle_frame[row_num][indA:indB] + frame_list_form[row_num][indB:]
-		new_frame.append(n_row)
-	return np.array(new_frame)
+		n_row = np.concatenate([frame[row_num, 0:indA], circle_frame[row_num, indA:indB], frame[row_num, indB:]])
+		new_frame.append(np.atleast_2d(n_row))
+	return np.vstack(tuple(new_frame))
 
 #Merges frames, replacing zero elements in one frame with nonzero elements from the other
 #This function assumes no overlapping elements
 def frame_merge(frame1, frame2):
-	new_frame = frame1
-	for i in range(NUM_ROWS):
-		for j in range(NUM_COLS):
-			if frame2[i][j] != 0:
-				new_frame[i][j] = frame2[i][j]
-	return new_frame	
+	frame1[frame1 == 0] = frame2[frame1 == 0]
+	return frame1	
 
 #Returns frame completely masked (by zeros) except for a ring with specified inner and outer radii
 def thick_ring(frame, center_tuple, inner_rad, outer_rad):
 	new_frame = []
-	#flf stands for frame_list_form
-	flf = np.ndarray.tolist(frame)
 	#Combine the punch_hole and mk_disk functions
-	outer_circle = np.ndarray.tolist(mk_circle(frame, center_tuple, outer_rad))
-	inner_circle = np.ndarray.tolist(mk_circle(frame, center_tuple, inner_rad))
+	outer_circle = mk_circle(frame, center_tuple, outer_rad)
+	inner_circle = mk_circle(frame, center_tuple, inner_rad)
 	cf = frame_merge(inner_circle, outer_circle) #cf stands for circle_frame
-	for row_num in range(len(cf)):
-		indA, indB = 16, 16
-		for i in range(31):
-			if cf[row_num][i] != 0:
+	for row_num in range(NUM_ROWS):
+		indA, indB = NUM_ROWS/2, NUM_COLS/2
+		for i in range(NUM_ROWS - 1):
+			if cf[row_num,i] != 0:
 				indA = i
 				break
-		for j in range(31,16,-1):
-			if cf[row_num][j] != 0:
+		for j in range(NUM_COLS-1, NUM_COLS/2, -1):
+			if cf[row_num,j] != 0:
 				indB = j
 				break
 		indC, indD = indA, indB
-		for i in range(indA+2, 31):
-			if cf[row_num][i] != 0:
+		for i in range(indA+2, NUM_ROWS-1):
+			if cf[row_num,i] != 0:
 				indC = i
 				break
 		for j in range(indB-2,0,-1):
-			if cf[row_num][j] != 0:
+			if cf[row_num,j] != 0:
 				indD = j
 				break
 		if indD < indC:
-			n_row = cf[row_num][0:indA] + flf[row_num][indA:indB] + cf[row_num][indB:]
+			n_row = np.concatenate([cf[row_num,0:indA], frame[row_num,indA:indB], cf[row_num,indB:]])
 			new_frame.append(n_row)
 			continue
-		n_row = cf[row_num][0:indA] + flf[row_num][indA:indC] + cf[row_num][indC:indD] + flf[row_num][indD:indB] + cf[row_num][indB:]
-		new_frame.append(n_row)
-	return np.array(new_frame)
+		n_row = np.concatenate([cf[row_num,0:indA], frame[row_num,indA:indC], cf[row_num,indC:indD], frame[row_num,indD:indB], cf[row_num,indB:]])
+		new_frame.append(np.atleast_2d(n_row))
+	return np.vstack(tuple(new_frame))
 
 #Print a fits frame as a pretty array of numbers
 def print_frame(frame, spacing = 1, num_sigfigs = 0):
-	for row in np.ndarray.tolist(frame):		
+	for row in frame:		
 		for element in row:
 			if element != 0:
 				a = len(str(round(element,num_sigfigs)))
@@ -262,7 +255,7 @@ def calculate_noise_flux(frame, avg_max_pixel, radius):
 def frame_aperture(frame, max_pixel):
 	best_aperture = 0
 	best_signal_to_noise = 0	
-	for aperture_radius in range(1, len(frame)/2):
+	for aperture_radius in range(1, NUM_ROWS/2):
 		noise = calculate_noise_flux(frame, max_pixel, aperture_radius)
 		signal = calculate_frame_flux(frame, max_pixel, aperture_radius)
 		signal_to_noise = signal/noise - penalty_function(aperture_radius)
@@ -270,7 +263,6 @@ def frame_aperture(frame, max_pixel):
 		if signal_to_noise > best_signal_to_noise:
 			best_signal_to_noise = signal_to_noise
 			best_aperture = aperture_radius
-
 	return best_aperture
 
 def avg_aperture(frame_list):
@@ -278,19 +270,26 @@ def avg_aperture(frame_list):
 	for frame in frame_list:
 		max_pixel = brightest_region(frame)
 		apertures.append(frame_aperture(frame, max_pixel))
-	return np.mean(apertures)
+	return sum(apertures)/len(apertures)
 
-def main():
-
-	fits_file = "prototype_data/SPITZER_I1_41629440_0000_0000_1_bcd.fits"
+#A very encapsulated aperture finding function
+#Input: filename. Output: aperture. Easy, one-step.
+def best_ap(fits_file):
 	hdulist = fits.open(fits_file)
 	frame_list = hdulist[0].data
-	#frame_one = frame_list[0]
-	
-	best_ap = avg_aperture(frame_list)
-	print "best aperture for frame list:", best_ap
+	rv = avg_aperture(frame_list)
+	return rv
 
-	#print_frame(test_disk, spacing = 2)
+def main():
+	fits_file = "prototype_data/SPITZER_I1_41629440_0000_0000_1_bcd.fits"
+	#print "best aperture for frame list:", best_ap(fits_file)
+	#Testing zone. Everything you need to run the program is above (just 2 lines)
+	hdulist = fits.open(fits_file)
+	frame_list = hdulist[0].data
+	frame_one = frame_list[0]
+	br = brightest_region(frame_one)
+	test_disk = thick_ring(frame_one, br, 4, 6)
+	#print_frame(test_disk, spacing = 3)
 	
 	#numpy2image("images/frame_one.png", frame_one)
 	#numpy2image("images/frame_one_mask_rad_2.png", test_disk)
