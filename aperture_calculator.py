@@ -237,7 +237,7 @@ def light_curve(frame, index_tuple, max_radius = 5):
 #Returns the total flux in a disk created from the frame argument
 def calculate_frame_flux(frame, avg_max_pixel, radius):
 	disk = mk_disk(frame, avg_max_pixel, radius)
-	return sum(sum(disk))
+	return np.sum(disk)
 
 #Returns a weight by radius, based on a Gaussian function approximating a point spread function
 #Lower radii (closer in to the star) get a higher weight than those farther away
@@ -252,9 +252,9 @@ def penalty_function(radius):
 #Total flux is calculated by taking into account annuli of increasing radius and weighting the flux therein accordingly
 def calculate_noise_flux(frame, avg_max_pixel, radius):
 	total_noise_flux = 0
-	for annulus in range(radius, len(frame[0])/2):
-		weight = weighting_function(frame[avg_max_pixel[0]][avg_max_pixel[1]], annulus)
-		annulus_sum = sum(sum(thick_ring(frame, avg_max_pixel, annulus, annulus+1)))
+	for annulus in range(radius, NUM_COLS/2):
+		weight = weighting_function(frame[avg_max_pixel[0]][avg_max_pixel[1]])
+		annulus_sum = np.sum(thick_ring(frame, avg_max_pixel, annulus, annulus+1))
 		total_noise_flux += weight*annulus_sum
 	return total_noise_flux
 
