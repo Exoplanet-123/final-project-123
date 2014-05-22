@@ -36,14 +36,14 @@ def parallelize_file_set(directory):
 	print '('+str(comm.Get_rank())+')',"Entered parallelizer."
 	rank = comm.Get_rank()
 	
-	#Responsibilities for process 0
+	#Responsibilities for process 0, the file distributer
 	if rank == 0:
 		input_files = get_fits(directory)
 		#How evenly can the files be distributed among the ranks?
 		remainder = len(input_files) % size
 		files_per_rank = len(input_files) / size
 		for process in range(size):
-			#Perform computations
+			#Distribute files to each process
 			if process != (size - 1):
 				upper_bound = (process + 1) * files_per_rank
 			else:
