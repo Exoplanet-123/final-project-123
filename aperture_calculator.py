@@ -246,7 +246,7 @@ def penalty_function(radius):
 def calculate_noise_flux(frame, avg_max_pixel, radius):
 	total_noise_flux = 0
 	for annulus in range(radius, NUM_COLS/2):
-		weight = weighting_function(frame[avg_max_pixel[0]][avg_max_pixel[1]])
+		weight = weighting_function(annulus)
 		annulus_sum = np.sum(thick_ring(frame, avg_max_pixel, annulus, annulus+1))
 		total_noise_flux += weight*annulus_sum
 	return total_noise_flux
@@ -291,6 +291,9 @@ def main():
 	test_disk = thick_ring(frame_one, br, 4, 6)
 	#print_frame(test_disk, spacing = 3)
 	
+	best_ap = avg_aperture(frame_list)
+	print "best aperture for frame list:", best_ap
+
 	#numpy2image("images/frame_one.png", frame_one)
 	#numpy2image("images/frame_one_mask_rad_2.png", test_disk)
 	
