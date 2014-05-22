@@ -1,7 +1,9 @@
+#################################################################
 #Aperture production with Astropy, Bresenham circle algorithm 
-#Documentation can be found here:
-#http://docs.astropy.org/en/stable/io/fits/index.html
-#Started 4/27/2014
+#Documentation can be found here: http://docs.astropy.org/en/stable/io/fits/index.html
+#Project started 4/27/2014
+#Team: Hannah-Diamond Lowe, Zakir Gowani
+################################################################
 from astropy.io import fits
 import scipy
 import ds9
@@ -12,7 +14,6 @@ import matplotlib.pyplot as plt
 import PIL
 import Image
 
-
 NUM_ROWS = 32
 NUM_COLS = 32
 
@@ -22,12 +23,12 @@ DIAMETER = 0.85				#meters
 F_NUM = FOCAL_LENGTH/DIAMETER
 WAVELENGTH = 3.6			#microns
 
-
-#Find 2x2 area with greatest total luminosity
-#Return index of brightest pixel in the 2x2 area
-#Finding the brightest pixel this way eliminates the concern for a false 
-#positive brightest pixel, which could occur with a spike in detector noise
 def brightest_region(frame):
+	"""Find 2x2 area with greatest total luminosity
+	Return index of brightest pixel in the 2x2 area
+	Finding the brightest pixel this way eliminates the concern for a false 
+	positive brightest pixel, which could occur with a spike in detector noise
+	"""
 	N = NUM_ROWS
 	M = NUM_COLS
 	# Since we're looking for 2x2 regions using the top left index, 
@@ -54,8 +55,8 @@ def brightest_region(frame):
 					best_ind = (i + 1, j + 1)
 	return best_ind
 
-#Returns the index of the brightest region across a list of frames
 def avg_brightest_region(frame_list):
+	"""Returns the index of the brightest region across a list of frames"""
 	brightest_indices = []
 	#avg_brightest_ind = (0, 0)
 	for frame in frame_list:
@@ -64,9 +65,10 @@ def avg_brightest_region(frame_list):
 	avg_brightest_ind = (brightest_ind_total[0]/len(frame_list), brightest_ind_total[1]/len(frame_list))
 	return avg_brightest_ind
 
-#Returns data with items not lying on circle (of given radius) masked by zero
-#Uses the Bresenham Circle Algorithm to draw nice looking circles in taxicab geometry
 def mk_circle(frame, center_tuple, radius):	
+	"""Returns data with items not lying on circle (of given radius) masked by zero
+	Uses the Bresenham Circle Algorithm to draw nice looking circles in taxicab geometry
+	"""
 	(x0, y0) = center_tuple
 	new_frame = np.array([[0.0]*NUM_COLS]*NUM_ROWS)
 	if radius == 1:
@@ -105,8 +107,8 @@ def mk_circle(frame, center_tuple, radius):
 			radiusError += 2.0*(y - x + 1.0)
 	return new_frame
 
-#Adaptation of Bresenham Circle Algorithm for disks
 def mk_disk(frame, center_tuple, radius):
+	"""Adaptation of Bresenham Circle Algorithm for disks"""	
 	new_frame = []
 	circle_frame = mk_circle(frame, center_tuple, radius)
 	for row_num in range(NUM_COLS):
@@ -123,8 +125,8 @@ def mk_disk(frame, center_tuple, radius):
 		new_frame.append(np.atleast_2d(n_row))
 	return np.vstack(tuple(new_frame))
 
-#Inversion of the mk_disk function (zeros in the center)
 def punch_hole(frame, center_tuple, radius):
+	"""Inversion of the mk_disk function (zeros in the center)"""
 	new_frame = []
 	#Circle_frame has radius one pixel larger than what we want
 	circle_frame = mk_circle(frame, center_tuple, radius + 1)
@@ -142,14 +144,14 @@ def punch_hole(frame, center_tuple, radius):
 		new_frame.append(np.atleast_2d(n_row))
 	return np.vstack(tuple(new_frame))
 
-#Merges frames, replacing zero elements in one frame with nonzero elements from the other
-#This function assumes no overlapping elements
 def frame_merge(frame1, frame2):
+	"""Merges frames, replacing zero elements in one frame with nonzero elements from the other
+	This function assumes no overlapping elements"""
 	frame1[frame1 == 0] = frame2[frame1 == 0]
 	return frame1	
 
-#Returns frame completely masked (by zeros) except for a ring with specified inner and outer radii
 def thick_ring(frame, center_tuple, inner_rad, outer_rad):
+	"""Returns frame completely masked (by zeros) except for a ring with specified inner and outer radii"""
 	new_frame = []
 	#Combine the punch_hole and mk_disk functions
 	outer_circle = mk_circle(frame, center_tuple, outer_rad)
@@ -182,8 +184,8 @@ def thick_ring(frame, center_tuple, inner_rad, outer_rad):
 		new_frame.append(np.atleast_2d(n_row))
 	return np.vstack(tuple(new_frame))
 
-#Print a fits frame as a pretty array of numbers
 def print_frame(frame, spacing = 1, num_sigfigs = 0):
+	"""Print a fits frame as a pretty array of numbers"""
 	for row in frame:		
 		for element in row:
 			if element != 0:
@@ -193,8 +195,8 @@ def print_frame(frame, spacing = 1, num_sigfigs = 0):
 				print "0", " " * (spacing - 1),
 		print ""
 
-#Writes frame to as an image to a png (ideally) file
 def numpy2image(new_filename, frame):
+	"""Writes frame to as an image to a png (ideally) file"""
 	#Normalize frame luminosities to list in range 0 to 255
 	frame1 = frame/np.max(np.abs(frame))
 	frame1 *= 255
@@ -204,10 +206,10 @@ def numpy2image(new_filename, frame):
 	new_img = new_img.resize((288, 288), Image.BILINEAR)
 	new_img.save(new_filename)
 
-#Plots light curve with respect to a given pixel as the origin
-#Saves image in images folder
-#Returns a list of the average fluxes plotted
 def light_curve(frame, index_tuple, max_radius = 5):
+	"""Plots light curve with respect to a given pixel as the origin
+	Saves image in images folder
+	Returns a list of the average fluxes plotted"""
 	x_points = []
 	y_points = []
 	x = 0
@@ -227,23 +229,23 @@ def light_curve(frame, index_tuple, max_radius = 5):
 	#plt.show()
 	return y_points
 
-#Returns the total flux in a disk created from the frame argument
 def calculate_frame_flux(frame, avg_max_pixel, radius):
+	"""Returns the total flux in a disk created from the frame argument"""
 	disk = mk_disk(frame, avg_max_pixel, radius)
 	return np.sum(disk)
 
-#Returns a weight by radius, based on a Gaussian function approximating a point spread function
-#Lower radii (closer in to the star) get a higher weight than those farther away
 def weighting_function(radius):
+	"""Returns a weight by radius, based on a Gaussian function approximating a point spread function
+	Lower radii (closer in to the star) get a higher weight than those farther away"""
 	return math.exp(-(radius*radius)/(2*0.45*WAVELENGTH*F_NUM))
 
-#Returns a penalty for using more radii (still refining best function to use)
 def penalty_function(radius):
+	"""Returns a penalty for using more radii (still refining best function to use)"""
 	return math.exp(radius - 5)
 
-#Returns the total noise in a frame (anything in a frame that is not the signal)
-#Total flux is calculated by taking into account annuli of increasing radius and weighting the flux therein accordingly
 def calculate_noise_flux(frame, avg_max_pixel, radius):
+	"""Returns the total noise in a frame (anything in a frame that is not the signal)
+	Total flux is calculated by taking into account annuli of increasing radius and weighting the flux therein accordingly"""
 	total_noise_flux = 0
 	for annulus in range(radius, NUM_COLS/2):
 		weight = weighting_function(annulus)
@@ -251,8 +253,8 @@ def calculate_noise_flux(frame, avg_max_pixel, radius):
 		total_noise_flux += weight*annulus_sum
 	return total_noise_flux
 
-#Returns numerical measurement describing quality of mask
 def frame_aperture(frame, max_pixel):
+	"""Returns numerical measurement describing quality of mask"""
 	best_aperture = 0
 	best_signal_to_noise = 0	
 	for aperture_radius in range(1, NUM_ROWS/2):
@@ -272,9 +274,9 @@ def avg_aperture(frame_list):
 		apertures.append(frame_aperture(frame, max_pixel))
 	return sum(apertures)/len(apertures)
 
-#A very encapsulated aperture finding function
-#Input: filename. Output: aperture. Easy, one-step.
 def best_ap(fits_file):
+	"""A very encapsulated aperture finding function
+	Input: filename. Output: aperture. Easy, one-step."""
 	hdulist = fits.open(fits_file)
 	frame_list = hdulist[0].data
 	rv = avg_aperture(frame_list)

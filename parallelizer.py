@@ -1,7 +1,7 @@
 import aperture_calculator as AC
 import numpy as np
 from mpi4py import MPI
-import os
+import os, sys
 
 #The number of images in a single fits file
 NUM_FITS_IMAGES = 64
@@ -9,9 +9,10 @@ NUM_FITS_IMAGES = 64
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
 
-#This function takes a directory and returns a list of files to analyze
-#Condition: the filename ends with "bcd.fits"
 def get_fits(directory):
+	"""This function takes a directory and returns a list of files to analyze
+		Condition: the filename ends with "bcd.fits
+	"""
 	all_files = [os.path.join(directory, file) for file in os.listdir(directory)]
 	fits_images = []
 	for filename in all_files:
@@ -20,19 +21,20 @@ def get_fits(directory):
 			fits_images.append(filename)
 	return fits_images
 
-#This function analyzes a single file in parallel
-#64 FITS images are spread across our available ranks
-#This implementation would be distinct from the parallelize_file_set function
-#This breaks a single file's analysis into steps, but parallelize_file_set function spreads a set of files
-#Function still in progress
 def parallelize_single_file(filename):
+	"""This function analyzes a single file in parallel
+	64 FITS images are spread across our available ranks
+	This implementation would be distinct from the parallelize_file_set function
+	This breaks a single file's analysis into steps, but parallelize_file_set function spreads a set of files
+	Function still in progress 
+	"""
 	pass
 
-#This function analyzes the appropriate files in an input directory
-#Individual fits files are *not* spread among the ranks, unlike the parallelize_single_file
-#This is an alternate approach to parallelization
-#This function is working, it's just waiting on the AC.best_ap function.
-def parallelize_file_set(directory):
+def parallelize_file_set(directory, output_file):
+	"""This function analyzes the appropriate files in an input directory
+	Individual fits files are *not* spread among the ranks, unlike the parallelize_single_file
+	This is an alternate approach to parallelization
+	"""
 	print '('+str(comm.Get_rank())+')',"Entered parallelizer."
 	rank = comm.Get_rank()
 	
@@ -49,26 +51,47 @@ def parallelize_file_set(directory):
 			else:
 				upper_bound = (process + 1) * files_per_rank + remainder
 			comm.send(input_files[process * files_per_rank : upper_bound], dest=process, tag=process)
-			print "Thread (0) sent files ", process * files_per_rank, " through ", upper_bound, " to process ", process 
-	
+			print "(0) Sent files ", process * files_per_rank, " through ", upper_bound, " to process ", process 
 	#Responsibilities for all processes
 	input_files = comm.recv(source=0, tag=rank)
-	print "Thread ", rank, " got files ", [(str(file) + " ") for file in input_files]
-	aperture_dictionary = {}
+	aperture_dict = {}
 	for file in input_files:
-		print '('+str(comm.Get_rank())+')',"Analyzing " + file
 		aperture = AC.best_ap(file)
-		aperture_dictionary[file] = aperture
-	f = open('process_'+str(rank)+'_output', 'w')
-	for key in aperture_dictionary:
-		f.write(key + '\t' + str(aperture_dictionary[key]) + '\n')
-	f.close()
+		aperture_dict[file] = aperture
+	#The amount of space each process needs in the file is determined by the size of aperture_dict
+	#Each rank will tell one other rank how much space it needs
+	tot_bytes = 0
+	for key in aperture_dict.keys():
+		tot_bytes += sys.getsizeof(key + '\t' + str(aperture_dict[key]) + '\n')
+	comm.send(tot_bytes, dest=0)
+	offset_dict = {}
+	if rank == 0:
+		for process in range(size):
+			byte_offset = comm.recv(source=process)
+			offset_dict[process] = byte_offset
+		for process in range(1, size):
+			comm.send(offset_dict, dest=process, tag=process)
+	elif rank != 0:
+		offset_dict = comm.recv(source=0, tag=rank)
+	my_offset = 0
+	for key in offset_dict.keys():
+		if key < rank:
+			my_offset += offset_dict[key]
+	print '('+str(rank)+')' + " Byte offset is",my_offset
+	for process in range(size):
+		if rank == process:
+			f = open(output_file, 'a')
+			f.seek(my_offset)
+			for key in aperture_dict.keys():
+				f.write(key + '\t' + str(aperture_dict[key]) + '\n')
+				print key + '\t' + str(aperture_dict[key])
+			f.close()
+		else:
+			continue
 	return
 
-
 def main():
-	parallelize_file_set("prototype_data")
-
+	parallelize_file_set("prototype_data", "combined_output.txt")
 
 if __name__ == "__main__":
 	main()
