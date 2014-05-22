@@ -36,7 +36,7 @@ def parallelize_file_set(directory):
 	print '('+str(comm.Get_rank())+')',"Entered parallelizer."
 	rank = comm.Get_rank()
 	
-	#Responsibilities for process 0, the file distributer
+	#Responsibilities for process 0, the file distributor
 	if rank == 0:
 		input_files = get_fits(directory)
 		#How evenly can the files be distributed among the ranks?
