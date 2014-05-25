@@ -1,10 +1,16 @@
+#################################################################
+# Aperture production with MPI, Numpy, and Astropy  
+# This script parallelizes the action of the aperture_calculator script
+# Project started 4/27/2014
+# Team: Hannah-Diamond Lowe, Zakir Gowani
+################################################################
 import aperture_calculator as AC
 import numpy as np
 from mpi4py import MPI
-import os, sys
+import os
+import sys
 
-#The number of images in a single fits file
-NUM_FITS_IMAGES = 64
+NUM_FITS_IMAGES = 64	# The number of images in a single fits file
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
@@ -35,7 +41,7 @@ def parallelize_file_set(directory, output_file):
 	Individual fits files are *not* spread among the ranks, unlike the parallelize_single_file
 	This is an alternate approach to parallelization
 	"""
-	print '('+str(comm.Get_rank())+')',"Entered parallelizer."
+	print '(' + str(comm.Get_rank()) + ')', "Entered parallelizer."
 	rank = comm.Get_rank()
 	
 	#Responsibilities for process 0, the file distributor
@@ -49,14 +55,15 @@ def parallelize_file_set(directory, output_file):
 			if process != (size - 1):
 				upper_bound = (process + 1) * files_per_rank
 			else:
-				upper_bound = (process + 1) * files_per_rank + remainder
-			comm.send(input_files[process * files_per_rank : upper_bound], dest=process, tag=process)
-			print "(0) Sent files ", process * files_per_rank, " through ", upper_bound, " to process ", process 
+				upper_bound = (process+1) * files_per_rank + remainder
+			comm.send(input_files[process*files_per_rank : upper_bound], dest=process, tag=process)
+			print "(0) Sent files ", process*files_per_rank, " through ", upper_bound, " to process ", process 
 	#Responsibilities for all processes
 	input_files = comm.recv(source=0, tag=rank)
 	aperture_dict = {}
 	for file in input_files:
-		aperture = AC.best_ap(file)
+		aperture = 2
+		#aperture = AC.best_ap(file)
 		aperture_dict[file] = aperture
 	#The amount of space each process needs in the file is determined by the size of aperture_dict
 	#Each rank will tell one other rank how much space it needs
@@ -77,7 +84,7 @@ def parallelize_file_set(directory, output_file):
 	for key in offset_dict.keys():
 		if key < rank:
 			my_offset += offset_dict[key]
-	print '('+str(rank)+')' + " Byte offset is",my_offset
+	print '(' + str(rank) + ')' + " Byte offset is", my_offset
 	for process in range(size):
 		if rank == process:
 			f = open(output_file, 'a')

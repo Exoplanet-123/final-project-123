@@ -1,8 +1,9 @@
 #################################################################
-#Aperture production with Astropy, Bresenham circle algorithm 
-#Documentation can be found here: http://docs.astropy.org/en/stable/io/fits/index.html
-#Project started 4/27/2014
-#Team: Hannah-Diamond Lowe, Zakir Gowani
+# Aperture production with MPI, Numpy, and Astropy 
+# This script reads in FITS files and outputs apertures using a PSF approximation
+# Astropy documentation can be found here: http://docs.astropy.org/en/stable/io/fits/index.html
+# Project started 4/27/2014
+# Team: Hannah-Diamond Lowe, Zakir Gowani
 ################################################################
 from astropy.io import fits
 import scipy
@@ -14,14 +15,14 @@ import matplotlib.pyplot as plt
 import PIL
 import Image
 
-NUM_ROWS = 32
+NUM_ROWS = 32					# The dimensions of a FITS image
 NUM_COLS = 32
 
-#Spitzer params:
-FOCAL_LENGTH = 10.2		#meters
-DIAMETER = 0.85				#meters
+#Spitzer parameters:
+FOCAL_LENGTH = 10.2				# In meters
+DIAMETER = 0.85					# In meters
 F_NUM = FOCAL_LENGTH/DIAMETER
-WAVELENGTH = 3.6			#microns
+WAVELENGTH = 3.6				# In microns
 
 def brightest_region(frame):
 	"""Find 2x2 area with greatest total luminosity
@@ -70,7 +71,7 @@ def mk_circle(frame, center_tuple, radius):
 	Uses the Bresenham Circle Algorithm to draw nice looking circles in taxicab geometry
 	"""
 	(x0, y0) = center_tuple
-	new_frame = np.array([[0.0]*NUM_COLS]*NUM_ROWS)
+	new_frame = np.array([[0.0]*NUM_COLS] * NUM_ROWS)
 	if radius == 1:
 		i = x0
 		j = y0
@@ -91,14 +92,14 @@ def mk_circle(frame, center_tuple, radius):
 	radiusError = 1.0 - x
 	while x >= y:
 		#print new_frame[0,1]
-		new_frame[x+x0,y+y0] = frame[x+x0, y+y0]
-		new_frame[y+x0,x+y0] = frame[y+x0, x+y0]
-		new_frame[-x+x0,y+y0] = frame[-x+x0, y+y0]
-		new_frame[-y+x0,x+y0] = frame[-y+x0, x+y0]
-		new_frame[-x+x0,-y+y0] = frame[-x+x0, -y+y0]
-		new_frame[-y+x0,-x+y0] = frame[-y+x0, -x+y0]
-		new_frame[x+x0,-y+y0] = frame[x+x0, -y+y0]
-		new_frame[y+x0,-x+y0] = frame[y+x0, -x+y0]
+		new_frame[x + x0, y + y0] = frame[x + x0, y + y0]
+		new_frame[y + x0, x + y0] = frame[y + x0, x + y0]
+		new_frame[-x + x0, y + y0] = frame[-x + x0, y + y0]
+		new_frame[-y + x0, x + y0] = frame[-y + x0, x + y0]
+		new_frame[-x + x0, -y + y0] = frame[-x + x0, -y + y0]
+		new_frame[-y + x0, -x + y0] = frame[-y + x0, -x + y0]
+		new_frame[x + x0, -y + y0] = frame[x + x0, -y + y0]
+		new_frame[y + x0, -x + y0] = frame[y + x0, -x + y0]
 		y += 1
 		if radiusError < 0:
 			radiusError += 2.0*y + 1.0
@@ -136,7 +137,7 @@ def punch_hole(frame, center_tuple, radius):
 			if circle_frame[row_num, i] != 0:
 				indA = i
 				break
-		for j in range(NUM_COLS-1, NUM_COLS/2, -1):
+		for j in range(NUM_COLS - 1, NUM_COLS/2, -1):
 			if circle_frame[row_num, j] != 0:
 				indB = j
 				break
@@ -163,16 +164,16 @@ def thick_ring(frame, center_tuple, inner_rad, outer_rad):
 			if cf[row_num,i] != 0:
 				indA = i
 				break
-		for j in range(NUM_COLS-1, NUM_COLS/2, -1):
+		for j in range(NUM_COLS - 1, NUM_COLS/2, -1):
 			if cf[row_num,j] != 0:
 				indB = j
 				break
 		indC, indD = indA, indB
-		for i in range(indA+2, NUM_ROWS-1):
+		for i in range(indA + 2, NUM_ROWS-1):
 			if cf[row_num,i] != 0:
 				indC = i
 				break
-		for j in range(indB-2,0,-1):
+		for j in range(indB - 2, 0, -1):
 			if cf[row_num,j] != 0:
 				indD = j
 				break
@@ -237,7 +238,7 @@ def calculate_frame_flux(frame, avg_max_pixel, radius):
 def weighting_function(radius):
 	"""Returns a weight by radius, based on a Gaussian function approximating a point spread function
 	Lower radii (closer in to the star) get a higher weight than those farther away"""
-	return math.exp(-(radius*radius)/(2*0.45*WAVELENGTH*F_NUM))
+	return math.exp( -(radius * radius) / (2 * 0.45 * WAVELENGTH * F_NUM) )
 
 def penalty_function(radius):
 	"""Returns a penalty for using more radii (still refining best function to use)"""
@@ -260,8 +261,8 @@ def frame_aperture(frame, max_pixel):
 	for aperture_radius in range(1, NUM_ROWS/2):
 		noise = calculate_noise_flux(frame, max_pixel, aperture_radius)
 		signal = calculate_frame_flux(frame, max_pixel, aperture_radius)
+		#The signal to noise ratio is weighted by an exponential penalty function as well
 		signal_to_noise = signal/noise - penalty_function(aperture_radius)
-		#print "signal-to-noise ratio for a radius of " + str(radius) + " in frame one:", sig_noise_r4
 		if signal_to_noise > best_signal_to_noise:
 			best_signal_to_noise = signal_to_noise
 			best_aperture = aperture_radius
@@ -272,7 +273,7 @@ def avg_aperture(frame_list):
 	for frame in frame_list:
 		max_pixel = brightest_region(frame)
 		apertures.append(frame_aperture(frame, max_pixel))
-	return sum(apertures)/len(apertures)
+	return sum(apertures) / len(apertures)
 
 def best_ap(fits_file):
 	"""A very encapsulated aperture finding function
@@ -295,7 +296,6 @@ def main():
 	
 	best_ap = avg_aperture(frame_list)
 	print "best aperture for frame list:", best_ap
-
 	#numpy2image("images/frame_one.png", frame_one)
 	#numpy2image("images/frame_one_mask_rad_2.png", test_disk)
 	
