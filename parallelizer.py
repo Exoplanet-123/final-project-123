@@ -154,7 +154,7 @@ def prll_dir_mthd_B(directory, output_file):
 	return
 
 def main():
-	prll_dir_mthd_A("prototype_data", "combined_outputB.txt")
+	prll_dir_mthd_A("prototype_data", "combined_outputA.txt")
 	#prll_dir_mthd_B("prototype_data", "combined_outputB.txt")
 	#parallelize_single_file("prototype_data/abcd.fits", "abcd_output.txt")
 
