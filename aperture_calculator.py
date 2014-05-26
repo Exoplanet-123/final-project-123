@@ -1,5 +1,5 @@
 #################################################################
-# Aperture production with MPI, Numpy, and Astropy 
+# Aperture calculation with MPI, Numpy, and Astropy 
 # This script reads in FITS files and outputs apertures using a PSF approximation
 # Astropy documentation can be found here: http://docs.astropy.org/en/stable/io/fits/index.html
 # Project started 4/27/2014

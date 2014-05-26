@@ -84,7 +84,7 @@ def prll_dir_mthd_A(directory, output_file):
 	This approach is very different from the method B function, prll_dir_mthd_B. 
 	In this approach, each thread contributes to processing all files (cooperative work).
 	In method B, each thread gets its own files (individual work).
-	Timing of this function's operation on 5 files yields: 1m13.984s (real)
+	Timing of this function's operation on 5 files yields: 1m13.984s (real), which is faster than mthd B
 	"""
 	input_files = get_fits(directory)
 	for file in input_files:
