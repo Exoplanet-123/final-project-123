@@ -14,6 +14,7 @@ import math
 import matplotlib.pyplot as plt
 import PIL
 import Image
+import random
 
 NUM_ROWS = 32					# The dimensions of a FITS image
 NUM_COLS = 32
@@ -298,15 +299,38 @@ def best_ap(fits_file):
 	Input: filename. Output: aperture. Easy, one-step."""
 	hdulist = fits.open(fits_file)
 	frame_list = hdulist[0].data
+	rv = avg_aperture(frame_list)
+	return rv
+
+def best_ap_avg_frame(fits_file):
+	"""Alternate version of best_ap(); 
+	instead calculates a single average frame from the 64."""
+	hdulist = fits.open(fits_file)
+	frame_list = hdulist[0].data
 	avg_frame = mk_avg_frame(frame_list)
 	max_pixel = brightest_region(avg_frame)
 	rv = frame_aperture(avg_frame, max_pixel)
 	return rv
 
+def best_ap_random(fits_file):
+	"""Calculates best aperture using 4 random representative frames
+	chosen from distinct 16-frame sectors.
+	For more detailed description of implementation, 
+	see docstring for Method D in parallelizer.py.
+	"""
+	hdulist = fits.open(fits_file)
+	frame_list = hdulist[0].data
+	index_choices = []
+	for d in range(0,3):
+		#16-frame sector
+		z = range(16*d, 16*(d+1))
+		choice = random.choice(z)
+		index_choices.append(choice)
+	new_frame_list = [frame_list[i] for i in index_choices]
+	return avg_aperture(new_frame_list)
+
 def main():
 	fits_file = "prototype_data/SPITZER_I1_41629440_0000_0000_1_bcd.fits"
-	#print "best aperture for frame list:", best_ap(fits_file)
-	#Testing zone. Everything you need to run the program is above (just 2 lines)
 	#hdulist = fits.open(fits_file)
 	#frame_list = hdulist[0].data
 	#frame_one = frame_list[0]
@@ -314,7 +338,7 @@ def main():
 	#test_disk = thick_ring(frame_one, br, 4, 6)
 	#print_frame(test_disk, spacing = 3)
 	
-	aperture = best_ap(fits_file)
+	aperture = best_ap_random(fits_file)
 	print "best aperture for frame list:", aperture
 	#numpy2image("images/frame_one.png", frame_one)
 	#numpy2image("images/frame_one_mask_rad_2.png", test_disk)

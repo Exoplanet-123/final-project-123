@@ -80,7 +80,8 @@ def parallelize_single_file(filename, output_file):
 	return
 		
 def prll_dir_mthd_A(directory, output_file):
-	"""Uses the parallel_single_file function to process each file in a directory.
+	"""Method A:
+	Uses the parallel_single_file function to process each file in a directory.
 	This approach is very different from the method B function, prll_dir_mthd_B. 
 	In this approach, each thread contributes to processing all files (cooperative work).
 	In method B, each thread gets its own files (individual work).
@@ -91,8 +92,9 @@ def prll_dir_mthd_A(directory, output_file):
 		parallelize_single_file(file, output_file)
 	return
 
-def prll_dir_mthd_B(directory, output_file):
-	"""This function analyzes all the appropriate files in an input directory
+def prll_dir_aux_func(directory, output_file, aperture_function):
+	"""Auxiliary function for methods B through D.
+	This function analyzes all the appropriate files in an input directory using an input aperture_function
 	Individual fits files are *not* spread among the ranks, unlike the parallelize_single_file function.
 	Instead, a set of files is distributed to each thread to process on its own.
 	Timing of this function on a set of 5 files yields: 1m55.745s(real)
@@ -119,7 +121,7 @@ def prll_dir_mthd_B(directory, output_file):
 	aperture_dict = {}
 	for file in input_files:
 		#aperture = 2
-		aperture = AC.best_ap(file)
+		aperture = aperture_function(file)
 		aperture_dict[file] = aperture
 	# The amount of space each process needs in the file is determined by the size of aperture_dict
 	# Each rank will tell one other rank how much space it needs
@@ -153,9 +155,43 @@ def prll_dir_mthd_B(directory, output_file):
 			continue
 	return
 
+def prll_dir_mthd_B(directory, output_file):
+	"""Method B:
+	Analyzes all the appropriate files in an input directory
+	Individual fits files are *not* spread among the ranks, unlike the parallelize_single_file function.
+	Instead, a set of files is distributed to each thread to process on its own.
+	All 64 frames in a file are processed, then averaged.
+	Timing of this function on a set of 5 files yields: 1m55.745s(real)
+	"""
+	prll_dir_aux_func(directory, output_file, AC.best_ap)
+
+def prll_dir_mthd_C(directory, output_file):
+	"""Method C:
+	Analyzes all the appropriate files in an input directory
+	Individual fits files are *not* spread among the ranks, unlike the parallelize_single_file function.
+	Instead, a set of files is distributed to each thread to process on its own.
+	64 frames in a file are averaged first, then processed, in contrast to method B.
+	
+	"""
+	prll_dir_aux_func(directory, output_file, AC.best_ap_avg_frame)
+
+def prll_dir_mthd_D(directory, output_file):
+	"""Method D:
+	This function is similar to method C in that work is 
+	distributed on the file level; however, instead of processing
+	all 64 frames, a random sample of 4 frames is processed then averaged.
+	The 4 representative frames come from 4 different 16-frame sectors
+	of the 64 images (recall that FITS images are ordered sequentially
+	in time)."""
+	prll_dir_aux_func(directory, output_file, AC.best_ap_random)
+
+
+
 def main():
-	prll_dir_mthd_A("prototype_data", "combined_outputA.txt")
+	#prll_dir_mthd_A("prototype_data", "combined_outputA.txt")
 	#prll_dir_mthd_B("prototype_data", "combined_outputB.txt")
+	#prll_dir_mthd_C("prototype_data", "combined_outputB.txt")
+	#prll_dir_mthd_D("prototype_data", "combined_outputB.txt")
 	#parallelize_single_file("prototype_data/abcd.fits", "abcd_output.txt")
 
 if __name__ == "__main__":
