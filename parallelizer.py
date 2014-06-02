@@ -190,8 +190,8 @@ def prll_dir_mthd_D(directory, output_file):
 def main():
 	#prll_dir_mthd_A("prototype_data", "combined_outputA.txt")
 	#prll_dir_mthd_B("prototype_data", "combined_outputB.txt")
-	#prll_dir_mthd_C("prototype_data", "combined_outputB.txt")
-	#prll_dir_mthd_D("prototype_data", "combined_outputB.txt")
+	prll_dir_mthd_C("prototype_data", "combined_outputC.txt")
+	#prll_dir_mthd_D("prototype_data", "combined_outputD.txt")
 	#parallelize_single_file("prototype_data/abcd.fits", "abcd_output.txt")
 
 if __name__ == "__main__":
