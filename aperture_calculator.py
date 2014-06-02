@@ -230,6 +230,17 @@ def light_curve(frame, index_tuple, max_radius = 5):
 	#plt.show()
 	return y_points
 
+
+def mk_avg_frame(frame_list):
+	"""Returns a frame (32x32 array) that averages all 64 data frames in each fits file together """
+	avg_frame = np.zeros((NUM_ROWS, NUM_COLS), dtype=float)
+	for frame in frame_list:
+		for i in range(NUM_ROWS):
+			for j in range(NUM_COLS):
+				avg_frame[i][j] += frame[i][j]
+	return avg_frame/len(frame_list)
+
+
 def calculate_frame_flux(frame, avg_max_pixel, radius):
 	"""Returns the total flux in a disk created from the frame argument"""
 	disk = mk_disk(frame, avg_max_pixel, radius)
@@ -287,7 +298,9 @@ def best_ap(fits_file):
 	Input: filename. Output: aperture. Easy, one-step."""
 	hdulist = fits.open(fits_file)
 	frame_list = hdulist[0].data
-	rv = avg_aperture(frame_list)
+	avg_frame = mk_avg_frame(frame_list)
+	max_pixel = brightest_region(avg_frame)
+	rv = frame_aperture(avg_frame, max_pixel)
 	return rv
 
 def main():
@@ -296,13 +309,13 @@ def main():
 	#Testing zone. Everything you need to run the program is above (just 2 lines)
 	hdulist = fits.open(fits_file)
 	frame_list = hdulist[0].data
-	frame_one = frame_list[0]
-	br = brightest_region(frame_one)
-	test_disk = thick_ring(frame_one, br, 4, 6)
+	#frame_one = frame_list[0]
+	#br = brightest_region(frame_one)
+	#test_disk = thick_ring(frame_one, br, 4, 6)
 	#print_frame(test_disk, spacing = 3)
 	
-	best_ap = avg_aperture(frame_list)
-	print "best aperture for frame list:", best_ap
+	aperture = best_ap(fits_file)
+	print "best aperture for frame list:", aperture
 	#numpy2image("images/frame_one.png", frame_one)
 	#numpy2image("images/frame_one_mask_rad_2.png", test_disk)
 	
