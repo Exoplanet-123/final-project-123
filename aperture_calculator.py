@@ -307,8 +307,8 @@ def main():
 	fits_file = "prototype_data/SPITZER_I1_41629440_0000_0000_1_bcd.fits"
 	#print "best aperture for frame list:", best_ap(fits_file)
 	#Testing zone. Everything you need to run the program is above (just 2 lines)
-	hdulist = fits.open(fits_file)
-	frame_list = hdulist[0].data
+	#hdulist = fits.open(fits_file)
+	#frame_list = hdulist[0].data
 	#frame_one = frame_list[0]
 	#br = brightest_region(frame_one)
 	#test_disk = thick_ring(frame_one, br, 4, 6)
