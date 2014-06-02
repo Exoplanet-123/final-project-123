@@ -236,12 +236,12 @@ def calculate_frame_flux(frame, avg_max_pixel, radius):
 	return np.sum(disk)
 
 def weighting_function(radius):
-	"""Returns a weight by radius, based on a Gaussian function approximating a point spread function
+	"""Returns a weight by radius, based on a Gaussian function approximating a point spread function (equation from Wikipedia)
 	Lower radii (closer in to the star) get a higher weight than those farther away"""
 	return math.exp( -(radius * radius) / (2 * 0.45 * WAVELENGTH * F_NUM) )
 
 def penalty_function(radius):
-	"""Returns a penalty for using more radii (still refining best function to use)"""
+	"""Returns a penalty for using larger radii"""
 	return math.exp(radius - 5)
 
 def calculate_noise_flux(frame, avg_max_pixel, radius):
@@ -255,25 +255,32 @@ def calculate_noise_flux(frame, avg_max_pixel, radius):
 	return total_noise_flux
 
 def frame_aperture(frame, max_pixel):
-	"""Returns numerical measurement describing quality of mask"""
-	best_aperture = 0
-	best_signal_to_noise = 0	
+	"""Returns two best aperture sizes. 
+	Given the way the signal to noise and penalty functions work, these two apertures should be consecutive"""
+	aperture_1 = 0
+	aperture_2 = 0
+	signal_to_noise_1 = 0	
+	signal_to_noise_1 = 0
 	for aperture_radius in range(1, NUM_ROWS/2):
 		noise = calculate_noise_flux(frame, max_pixel, aperture_radius)
 		signal = calculate_frame_flux(frame, max_pixel, aperture_radius)
-		#The signal to noise ratio is weighted by an exponential penalty function as well
 		signal_to_noise = signal/noise - penalty_function(aperture_radius)
-		if signal_to_noise > best_signal_to_noise:
-			best_signal_to_noise = signal_to_noise
-			best_aperture = aperture_radius
-	return best_aperture
+		if signal_to_noise > signal_to_noise_1:
+			signal_to_noise_2 = signal_to_noise_1
+			aperture_2 = aperture_1
+			signal_to_noise_1 = signal_to_noise
+			aperture_1 = aperture_radius
+		elif signal_to_noise > signal_to_noise_2:
+			signal_to_noise_2 = signal_to_noise
+			aperture_2 = aperture_radius
+	return (aperture_1, aperture_2)
 
 def avg_aperture(frame_list):
 	apertures = []
 	for frame in frame_list:
 		max_pixel = brightest_region(frame)
 		apertures.append(frame_aperture(frame, max_pixel))
-	return sum(apertures) / len(apertures)
+	return (sum(ap[0] for ap in apertures)/len(apertures), sum(ap[1] for ap in apertures)/len(apertures))
 
 def best_ap(fits_file):
 	"""A very encapsulated aperture finding function
