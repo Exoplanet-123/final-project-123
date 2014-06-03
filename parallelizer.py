@@ -3,6 +3,7 @@
 # This script parallelizes the action of the aperture_calculator script
 # Project started 4/27/2014
 # Team: Hannah-Diamond Lowe, Zakir Gowani
+# RCC data at: /tmp/hannah&zakir/
 ################################################################
 import aperture_calculator as AC
 import numpy as np
@@ -60,22 +61,28 @@ def parallelize_single_file(filename, output_file):
 		my_range = comm.recv(source=0, tag=rank)
 	if rank == 0:
 		my_range = range(0, imgs_per_rank)
-	sum = 0
+	sumA = 0
+	sumB = 0
 	for i in my_range:
 		max_pixel = AC.brightest_region(frame_list[i])
-		sum += AC.frame_aperture(frame_list[i], max_pixel)
-	print '(' + str(comm.Get_rank()) + ')', "Intermediate sum: ", sum
+		tmp = AC.frame_aperture(frame_list[i], max_pixel)
+		sumA += tmp[0]
+		sumB += tmp[1]
+	print '(' + str(comm.Get_rank()) + ')', "Intermediate sum: ", (sumA, sumB)
 	if rank != 0:
-		comm.send(sum, dest=0, tag=rank)
+		comm.send((sumA, sumB), dest=0, tag=rank)
 	if rank == 0:
-		total = sum
+		totalA = sumA
+		totalB = sumB
 		for process in range(1, size):
 			z = comm.recv(source=process, tag=process)
-			total += z
-		avg_aperture = float(total) / (float(NUM_FITS_IMAGES))
+			totalA += z[0]
+			totalB += z[1]
+		avg_apertureA = float(totalA) / (float(NUM_FITS_IMAGES))
+		avg_apertureB = float(totalB) / (float(NUM_FITS_IMAGES))
 		f = open(output_file, 'a')
-		f.write(filename + '\t' + str(avg_aperture))
-		print "Final aperture val:", filename + '\t' + str(avg_aperture)
+		f.write(filename + '\t' + str((avg_apertureA, avg_apertureB)) + '\n')
+		print "Final aperture val:", filename + '\t' + str((avg_apertureA, avg_apertureB))
 		f.close()
 	return
 		
@@ -188,11 +195,13 @@ def prll_dir_mthd_D(directory, output_file):
 
 
 def main():
-	#prll_dir_mthd_A("prototype_data", "combined_outputA.txt")
-	#prll_dir_mthd_B("prototype_data", "combined_outputB.txt")
-	prll_dir_mthd_C("prototype_data", "combined_outputC.txt")
-	#prll_dir_mthd_D("prototype_data", "combined_outputD.txt")
-	#parallelize_single_file("prototype_data/abcd.fits", "abcd_output.txt")
+	if (len(sys.argv) < 2):
+		print "Usage: python parallelizer.py <directory name>"
+	dir = sys.argv[1]
+	prll_dir_mthd_A(dir, "combined_outputA.txt")
+	#prll_dir_mthd_B(dir, "combined_outputB.txt")
+	#prll_dir_mthd_C(dir, "combined_outputC.txt")
+	#prll_dir_mthd_D(dir, "combined_outputD.txt")
 
 if __name__ == "__main__":
 	main()
