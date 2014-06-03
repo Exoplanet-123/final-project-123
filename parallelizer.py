@@ -198,10 +198,20 @@ def main():
 	if (len(sys.argv) < 2):
 		print "Usage: python parallelizer.py <directory name>"
 	dir = sys.argv[1]
-	prll_dir_mthd_A(dir, "combined_outputA.txt")
-	#prll_dir_mthd_B(dir, "combined_outputB.txt")
-	#prll_dir_mthd_C(dir, "combined_outputC.txt")
-	#prll_dir_mthd_D(dir, "combined_outputD.txt")
+	try:
+		method = sys.argv[2]
+	except:
+		method = "C"
+	
+	
+	if method == "A":
+		prll_dir_mthd_A(dir, "combined_outputA.txt")
+	elif method == "B":
+		prll_dir_mthd_B(dir, "combined_outputB.txt")
+	elif method == "C":
+		prll_dir_mthd_C(dir, "combined_outputC.txt")
+	elif method == "D":
+		prll_dir_mthd_D(dir, "combined_outputD.txt")
 
 if __name__ == "__main__":
 	main()
