@@ -4,6 +4,7 @@
 # Project started 4/27/2014
 # Team: Hannah-Diamond Lowe, Zakir Gowani
 # RCC data at: /tmp/hannah&zakir/
+# Example usage: mpirun -np 16 python parallelizer.py /tmp/hannah\&zakir/dataset01 C
 ################################################################
 import aperture_calculator as AC
 import numpy as np
@@ -124,14 +125,19 @@ def prll_dir_aux_func(directory, output_file, aperture_function):
 			comm.send(input_files[process*files_per_rank : upper_bound], dest=process, tag=process)
 			print "(0) Sent files ", process*files_per_rank, " through ", upper_bound, " to process ", process 
 		input_files = input_files[0: files_per_rank]
+		print "(0) Sent files ", 0, " through ", files_per_rank, " to process ", rank
 	# Responsibilities for all processes
 	if rank != 0:
 		input_files = comm.recv(source=0, tag=rank)
 	aperture_dict = {}
 	for file in input_files:
 		#aperture = 2
-		aperture = aperture_function(file)
-		aperture_dict[file] = aperture
+		try:
+			aperture = aperture_function(file)
+			print '(' + str(rank) + ") Analyzed " + file + ", result =", aperture
+			aperture_dict[file] = aperture
+		except:
+			print "Failure at " + file
 	# The amount of space each process needs in the file is determined by the size of aperture_dict
 	# Each rank will tell one other rank how much space it needs
 	tot_bytes = 0
