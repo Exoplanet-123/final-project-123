@@ -11,7 +11,8 @@ import subprocess
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-import Image
+#Uncomment this import once the RCC has installed the Image library
+#import Image
 import random
 
 NUM_ROWS = 32					# The dimensions of a FITS image
@@ -195,6 +196,8 @@ def print_frame(frame, spacing = 1, num_sigfigs = 0):
 				print "0", " " * (spacing - 1),
 		print ""
 
+#This function is commented because the RCC has not installed the Image library
+"""
 def numpy2image(new_filename, frame):
 	"""Writes frame to as an image to a png (ideally) file"""
 	#Normalize frame luminosities to list in range 0 to 255
@@ -205,6 +208,9 @@ def numpy2image(new_filename, frame):
 	new_img = Image.open(new_filename)
 	new_img = new_img.resize((288, 288), Image.BILINEAR)
 	new_img.save(new_filename)
+"""
+
+
 
 def light_curve(frame, index_tuple, max_radius = 5):
 	"""Plots light curve with respect to a given pixel as the origin
