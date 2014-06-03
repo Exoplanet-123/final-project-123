@@ -115,7 +115,7 @@ def prll_dir_aux_func(directory, output_file, aperture_function):
 		# How evenly can the files be distributed among the ranks?
 		remainder = len(input_files) % size
 		files_per_rank = len(input_files) / size
-		for process in range(size):
+		for process in range(1, size):
 			# Distribute files to each process
 			if process != (size - 1):
 				upper_bound = (process+1) * files_per_rank
@@ -123,8 +123,10 @@ def prll_dir_aux_func(directory, output_file, aperture_function):
 				upper_bound = (process+1) * files_per_rank + remainder
 			comm.send(input_files[process*files_per_rank : upper_bound], dest=process, tag=process)
 			print "(0) Sent files ", process*files_per_rank, " through ", upper_bound, " to process ", process 
+		input_files = input_files[0: files_per_rank]
 	# Responsibilities for all processes
-	input_files = comm.recv(source=0, tag=rank)
+	if rank != 0:
+		input_files = comm.recv(source=0, tag=rank)
 	aperture_dict = {}
 	for file in input_files:
 		#aperture = 2

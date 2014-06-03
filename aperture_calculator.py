@@ -201,7 +201,7 @@ def print_frame(frame, spacing = 1, num_sigfigs = 0):
 		print ""
 
 def numpy2image(new_filename, frame):
-	Writes frame to as an image to a png (ideally) file
+	"""Writes frame to as an image to a png (ideally) file"""
 	#Normalize frame luminosities to list in range 0 to 255
 	frame1 = frame/np.max(np.abs(frame))
 	frame1 *= 255
