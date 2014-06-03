@@ -271,12 +271,6 @@ def calculate_noise_flux(frame, avg_max_pixel, radius):
 		total_noise_flux += weight*annulus_sum
 	return total_noise_flux
 
-def test(frame, avg_max_pixel):
-	print "test"
-	for annulus in range(NUM_COLS/2):
-		weight = weighting_function(annulus)
-		annulus_sum = np.sum(thick_ring(frame, avg_max_pixel, annulus, annulus+1))
-		print annulus_sum
 
 def frame_aperture(frame, max_pixel):
 	"""Returns two best aperture sizes. 
@@ -324,7 +318,6 @@ def best_ap_avg_frame(fits_file):
 	avg_frame = mk_avg_frame(frame_list)
 	max_pixel = brightest_region(avg_frame)
 	rv = frame_aperture(avg_frame, max_pixel)
-	test(avg_frame, max_pixel)
 	return rv
 
 def best_ap_random(fits_file):
