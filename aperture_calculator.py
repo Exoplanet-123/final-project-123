@@ -244,8 +244,13 @@ def mk_avg_frame(frame_list):
 
 def calculate_frame_flux(frame, avg_max_pixel, radius):
 	"""Returns the total flux in a disk created from the frame argument"""
-	disk = mk_disk(frame, avg_max_pixel, radius)
-	return np.sum(disk)
+	#disk = mk_disk(frame, avg_max_pixel, radius)
+	total_signal_flux = 0
+	for annulus in range(radius):
+		weight = weighting_function(annulus)
+		annulus_sum = np.sum(thick_ring(frame, avg_max_pixel, annulus, annulus+1))
+		total_signal_flux += weight*annulus_sum
+	return total_signal_flux
 
 def weighting_function(radius):
 	"""Returns a weight by radius, based on a Gaussian function approximating a point spread function (equation from Wikipedia)
@@ -254,7 +259,7 @@ def weighting_function(radius):
 
 def penalty_function(radius):
 	"""Returns a penalty for using larger radii"""
-	return math.exp(radius - 5)
+	return math.exp(radius - WAVELENGTH)
 
 def calculate_noise_flux(frame, avg_max_pixel, radius):
 	"""Returns the total noise in a frame (anything in a frame that is not the signal)
@@ -266,9 +271,16 @@ def calculate_noise_flux(frame, avg_max_pixel, radius):
 		total_noise_flux += weight*annulus_sum
 	return total_noise_flux
 
+def test(frame, avg_max_pixel):
+	print "test"
+	for annulus in range(NUM_COLS/2):
+		weight = weighting_function(annulus)
+		annulus_sum = np.sum(thick_ring(frame, avg_max_pixel, annulus, annulus+1))
+		print annulus_sum
+
 def frame_aperture(frame, max_pixel):
 	"""Returns two best aperture sizes. 
-	Given the way the signal to noise and penalty functions work, these two apertures should be consecutive"""
+	Given the way the signal to noise and penalty functions work, these two apertures should be consecutive - they are the range in which we can find the ideal aperture"""
 	aperture_1 = 0
 	aperture_2 = 0
 	signal_to_noise_1 = 0	
@@ -277,6 +289,8 @@ def frame_aperture(frame, max_pixel):
 		noise = calculate_noise_flux(frame, max_pixel, aperture_radius)
 		signal = calculate_frame_flux(frame, max_pixel, aperture_radius)
 		signal_to_noise = signal/noise - penalty_function(aperture_radius)
+		#print signal/noise
+		#print signal_to_noise
 		if signal_to_noise > signal_to_noise_1:
 			signal_to_noise_2 = signal_to_noise_1
 			aperture_2 = aperture_1
@@ -310,6 +324,7 @@ def best_ap_avg_frame(fits_file):
 	avg_frame = mk_avg_frame(frame_list)
 	max_pixel = brightest_region(avg_frame)
 	rv = frame_aperture(avg_frame, max_pixel)
+	test(avg_frame, max_pixel)
 	return rv
 
 def best_ap_random(fits_file):
@@ -337,8 +352,10 @@ def main():
 	#br = brightest_region(frame_one)
 	#test_disk = thick_ring(frame_one, br, 4, 6)
 	#print_frame(test_disk, spacing = 3)
+
 	
-	aperture = best_ap_random(fits_file)
+	
+	aperture = best_ap_avg_frame(fits_file)
 	print "best aperture for frame list:", aperture
 	#numpy2image("images/frame_one.png", frame_one)
 	#numpy2image("images/frame_one_mask_rad_2.png", test_disk)
