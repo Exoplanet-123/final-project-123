@@ -24,6 +24,10 @@ DIAMETER = 0.85					# In meters
 F_NUM = FOCAL_LENGTH/DIAMETER
 WAVELENGTH = 3.6				# In microns
 
+####################################################################################
+# Interpreting and processing raw FITS data #
+####################################################################################
+
 def brightest_region(frame):
 	"""Find 2x2 area with greatest total luminosity
 	Return index of brightest pixel in the 2x2 area
@@ -55,6 +59,7 @@ def brightest_region(frame):
 				else:
 					best_ind = (i + 1, j + 1)
 	return best_ind
+
 
 def avg_brightest_region(frame_list):
 	"""Returns the index of the brightest region across a list of frames"""
@@ -212,29 +217,10 @@ def numpy2image(new_filename, frame):
 
 
 
-def light_curve(frame, index_tuple, max_radius = 5):
-	"""Plots light curve with respect to a given pixel as the origin
-	Saves image in images folder
-	Returns a list of the average fluxes plotted"""
-	x_points = []
-	y_points = []
-	x = 0
-	for rad in range(max_radius + 1):
-		z = get_annulus_frames(frame, index_tuple, rad) # frame_neighbors_n(frame, index_tuple, level = rad)
-		#print z
-		avg = (sum(z))/(float(len(z)))
-		x_points.append(x)
-		y_points.append(avg)
-		x += 1
-	print "flux by anulus", y_points
-	plt.plot(x_points, y_points, 'r--')
-	plt.title('Light Curve from pixel ' + str(index_tuple))
-	plt.xlabel('Radius (pixels)')
-	plt.ylabel('Average luminosity')
-	plt.savefig("images/light_curve" + str(index_tuple[0]) + "-" + str(index_tuple[0]) + ".png")
-	#plt.show()
-	return y_points
 
+##################################################################################
+# Working with a FITS frame to get the best aperture size #
+##################################################################################
 
 def mk_avg_frame(frame_list):
 	"""Returns a frame (32x32 array) that averages all 64 data frames in each fits file together """
@@ -245,11 +231,15 @@ def mk_avg_frame(frame_list):
 				avg_frame[i][j] += frame[i][j]
 	return avg_frame/len(frame_list)
 
-
 def calculate_frame_flux(frame, avg_max_pixel, radius):
 	"""Returns the total flux in a disk created from the frame argument"""
-	disk = mk_disk(frame, avg_max_pixel, radius)
-	return np.sum(disk)
+	#disk = mk_disk(frame, avg_max_pixel, radius)
+	total_signal_flux = 0
+	for annulus in range(radius):
+		weight = weighting_function(annulus)
+		annulus_sum = np.sum(thick_ring(frame, avg_max_pixel, annulus, annulus+1))
+		total_signal_flux += weight*annulus_sum
+	return total_signal_flux
 
 def weighting_function(radius):
 	"""Returns a weight by radius, based on a Gaussian function approximating a point spread function (equation from Wikipedia)
@@ -258,7 +248,7 @@ def weighting_function(radius):
 
 def penalty_function(radius):
 	"""Returns a penalty for using larger radii"""
-	return math.exp(radius - 5)
+	return math.exp(radius - WAVELENGTH)
 
 def calculate_noise_flux(frame, avg_max_pixel, radius):
 	"""Returns the total noise in a frame (anything in a frame that is not the signal)
@@ -272,7 +262,7 @@ def calculate_noise_flux(frame, avg_max_pixel, radius):
 
 def frame_aperture(frame, max_pixel):
 	"""Returns two best aperture sizes. 
-	Given the way the signal to noise and penalty functions work, these two apertures should be consecutive"""
+	Given the way the signal to noise and penalty functions work, these two apertures should be consecutive - they are the range in which we can find the ideal aperture"""
 	aperture_1 = 0
 	aperture_2 = 0
 	signal_to_noise_1 = 0	
@@ -281,6 +271,8 @@ def frame_aperture(frame, max_pixel):
 		noise = calculate_noise_flux(frame, max_pixel, aperture_radius)
 		signal = calculate_frame_flux(frame, max_pixel, aperture_radius)
 		signal_to_noise = signal/noise - penalty_function(aperture_radius)
+		#print signal/noise
+		#print signal_to_noise
 		if signal_to_noise > signal_to_noise_1:
 			signal_to_noise_2 = signal_to_noise_1
 			aperture_2 = aperture_1
@@ -297,6 +289,11 @@ def avg_aperture(frame_list):
 		max_pixel = brightest_region(frame)
 		apertures.append(frame_aperture(frame, max_pixel))
 	return (sum(ap[0] for ap in apertures)/len(apertures), sum(ap[1] for ap in apertures)/len(apertures))
+
+
+###################################################################################
+# Methods of producing the best aperture range #
+###################################################################################
 
 def best_ap(fits_file):
 	"""A very encapsulated aperture finding function
@@ -333,6 +330,9 @@ def best_ap_random(fits_file):
 	new_frame_list = [frame_list[i] for i in index_choices]
 	return avg_aperture(new_frame_list)
 
+
+
+
 def main():
 	fits_file = "prototype_data/SPITZER_I1_41629440_0000_0000_1_bcd.fits"
 	#hdulist = fits.open(fits_file)
@@ -342,7 +342,7 @@ def main():
 	#test_disk = thick_ring(frame_one, br, 4, 6)
 	#print_frame(test_disk, spacing = 3)
 	
-	aperture = best_ap_random(fits_file)
+	aperture = best_ap_avg_frame(fits_file)
 	print "best aperture for frame list:", aperture
 	#numpy2image("images/frame_one.png", frame_one)
 	#numpy2image("images/frame_one_mask_rad_2.png", test_disk)
