@@ -11,7 +11,10 @@ import subprocess
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-import Image
+try:
+	import Image
+except:
+	print "Image library load failed. Contact RCC or load different Python version"
 import random
 
 NUM_ROWS = 32					# The dimensions of a FITS image
