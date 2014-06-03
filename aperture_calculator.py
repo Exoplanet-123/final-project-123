@@ -11,7 +11,6 @@ import subprocess
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-import PIL
 import Image
 import random
 
