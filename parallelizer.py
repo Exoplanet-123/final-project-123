@@ -205,12 +205,16 @@ def main():
 	
 	
 	if method == "A":
+		print "---A---"
 		prll_dir_mthd_A(dir, "combined_outputA.txt")
 	elif method == "B":
+		print "---B---"
 		prll_dir_mthd_B(dir, "combined_outputB.txt")
 	elif method == "C":
+		print "---C---"
 		prll_dir_mthd_C(dir, "combined_outputC.txt")
 	elif method == "D":
+		print "---D---"
 		prll_dir_mthd_D(dir, "combined_outputD.txt")
 
 if __name__ == "__main__":
