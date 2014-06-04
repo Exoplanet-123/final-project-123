@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -- nodes=16
+#SBATCH --nodes=16
 #SBATCH --exclusive
 #SBATCH --constraint=ib
 
