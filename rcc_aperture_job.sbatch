@@ -3,6 +3,8 @@
 #SBATCH --nodes=16
 #SBATCH --exclusive
 #SBATCH --constraint=ib
+#SBATCH --job-name=aperture_calc
+#SBATCH --output=aperture_calc.out
 
 module load mpi4py
 
